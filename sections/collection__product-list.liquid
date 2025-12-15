@@ -1,0 +1,72 @@
+<div class="container" vue-init v-cloak>
+  {% assign sort_by = collection.sort_by | default: collection.default_sort_by %}
+  <product-list-and-filtering inline-template default-sort="{{ sort_by }}">
+    <div class="md:flex">
+      <aside class="md:basis-1/4">
+        {% render 'facets', results: collection %}
+      </aside>
+      
+      <div class="md:basis-3/4">
+        <aside class="toolbar md:flex items-center justify-between mb-5">
+          <span>{{ 'collections.general.products_count' | t: count: collection.products_count }}</span>
+        
+          <div>
+            <label for="sort-by">{{ 'collections.sorting.title' | t }}</label>
+            <select v-model="sortBy" name="sort_by" id="sort-by" @change="submitFilters">              
+              {% for option in collection.sort_options %}
+                <option value="{{ option.value }}">
+                  {{ option.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </aside>
+
+        <section>
+          {%- paginate collection.products by 16 -%}
+            {%- if collection.products.size == 0 -%}
+              <p>{{ 'collections.general.no_matches' | t }}</p>
+            
+            {%- else -%}
+              <div class="relative">
+                <ul class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {% for product in collection.products %}
+                    <li>
+                      <product-item 
+                        inline-template 
+                        :product="{{ product | json | escape }}"
+                        :featured-media="{{ product.featured_media | json | escape }}"
+                        url="{{ product.url | within: collection }}"
+                        img-sizes="(max-width: 767px) 50vw, (max-width: 1440px) 20vw, calc(1440px / 5)"
+                        {% if forloop.index0 < 4 %}
+                          :is-lazy-load="false"
+                        {% endif %}
+                      >
+                        {% render 'product-item' %}
+                      </product-item>
+                    </li>
+                  {% endfor %}
+                </ul>
+  
+                {%- if paginate.pages > 1 -%}
+                  {% render 'pagination', paginate: paginate, classes: 'mt-12' %}
+                {%- endif -%}
+  
+                <div v-if="isLoading" class="mask mask--loading">
+                  <div class="text-center">
+                    <p class="lead">{{ 'collections.general.loading_products' | t }}</p>
+                    <div class="loading-animation">
+                      <div class="bounce1"></div>
+                      <div class="bounce2"></div>
+                      <div class="bounce3"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {%- endif -%}
+          {%- endpaginate -%}
+        </section>
+      </div>
+    </div>
+  </product-list-and-filtering>
+</div>

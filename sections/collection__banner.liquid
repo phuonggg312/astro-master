@@ -1,0 +1,17 @@
+<div class="container">
+  {% render 'breadcrumbs' %}
+
+  <div class="space-y-4 mb-4">
+    <h1>{{ collection.title | escape }}</h1>
+    <div class="rte">{{ collection.description }}</div>
+  </div>
+</div>
+
+{% schema %}
+  {
+    "name": "Collection Banner",
+    "tag": "section",
+    "settings": [
+    ]
+  }
+{% endschema %}

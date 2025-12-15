@@ -1,0 +1,48 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "hero-slider": {
+      "type": "index__hero-slider",
+      "blocks": {
+        "slide-1": {
+          "type": "slide",
+          "settings": {
+            "image": "shopify://shop_images/person-fishing-on-the-beach-is-silhouetted-at-sunset.jpg",
+            "title": "Sunset",
+            "url": ""
+          }
+        }
+      },
+      "block_order": [
+        "slide-1"
+      ],
+      "settings": {}
+    },
+    "spacer": {
+      "type": "index__spacer",
+      "settings": {
+        "padding": 60,
+        "padding_mobile": 30
+      }
+    },
+    "featured-products": {
+      "type": "index__featured-products",
+      "settings": {
+        "title": "Feature products"
+      }
+    }
+  },
+  "order": [
+    "hero-slider",
+    "spacer",
+    "featured-products"
+  ]
+}

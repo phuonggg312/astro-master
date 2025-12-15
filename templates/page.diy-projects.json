@@ -1,0 +1,11 @@
+{
+  "sections": {
+    "main": {
+      "type": "diy-projects__main",
+      "settings": {}
+    }
+  },
+  "order": [
+    "main"
+  ]
+}

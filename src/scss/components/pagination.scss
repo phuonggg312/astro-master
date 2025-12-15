@@ -1,0 +1,26 @@
+$pagination-box-size: 32px;
+
+.pagination {
+    @apply flex justify-center;
+
+    > * {
+        @apply flex items-center justify-center min-w-[2rem] min-h-[2rem] py-0 px-1 bg-white border-border rounded leading-none cursor-pointer transition-colors;
+
+        + * {
+            @apply ml-3;
+        }
+
+        &.deco {
+            @apply pointer-events-none;
+        }
+
+        &.current, 
+        &:hover {
+            @apply bg-primary border-primary text-white;
+        }
+
+        a {
+            @apply flex items-center justify-center w-full h-full text-current;
+        }
+    }
+}

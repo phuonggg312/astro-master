@@ -1,0 +1,50 @@
+<div vue-init v-cloak>
+  <product-related inline-template product-id="{{ product.id }}">
+    <div v-if="!isLoading && (recommendedProducts.length || recentlyViewedProducts.length)" class="mt-7">
+      <div class="container">
+        <vue-tabs nav-classes="mb-5">
+          <vue-tab v-if="recommendedProducts.length" title="{{ 'products.product.related_products' | t }}">
+            <keen-slider 
+              :arrows="true"
+              :options="sliderOptions" 
+            >
+              <div v-for="product in recommendedProducts" :key="product.id">
+                <product-item inline-template 
+                  :product="product"
+                  img-sizes="(max-width: 767px) 50vw, (max-width: 1440px) 25vw, calc(1440px / 4)"
+                >
+                  {% render 'product-item' %}
+                </product-item>
+              </div>
+            </keen-slider>
+          </vue-tab>
+
+          <vue-tab v-if="recentlyViewedProducts.length" title="{{ 'products.product.recently_viewed' | t }}">
+            <keen-slider
+              :arrows="true"
+              :options="sliderOptions"
+            >
+              <div v-for="product in recentlyViewedProducts" :key="product.id">
+                <product-item inline-template 
+                  :product="product"
+                  img-sizes="(max-width: 767px) 50vw, (max-width: 1440px) 25vw, calc(1440px / 4)"
+                >
+                  {% render 'product-item' %}
+                </product-item>
+              </div>
+            </keen-slider>
+          </vue-tab>
+        </vue-tabs>
+      </div>
+    </div>
+  </product-related>
+</div>
+
+{% schema %}
+  {
+    "name": "Product Related",
+    "tag": "section",
+    "settings": [
+    ]
+  }
+{% endschema %}

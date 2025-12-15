@@ -1,0 +1,11 @@
+{%- capture arrow_right -%}
+  {% render 'icon', name: 'arrow-right' %}
+{%- endcapture -%}
+
+{%- capture arrow_left -%}
+  {% render 'icon', name: 'arrow-left' %}
+{%- endcapture -%}
+
+<div class="pagination {{ classes }}">
+  {{ paginate | default_pagination: next: arrow_right, previous: arrow_left }}
+</div>

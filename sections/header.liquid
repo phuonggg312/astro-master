@@ -1,0 +1,114 @@
+<div class="relative z-10 bg-white">
+  <div class="container flex h-header">
+    <div class="flex-1 flex items-center">
+      <button class="navigation-toggle flex items-center justify-center lg:hidden" @click="toggleFlyout('menu')" aria-label="Menu toggle">
+        <template v-if="!flyouts.menu">{% render 'icon', name: 'menu' %}</template>
+        <template v-else>{% render 'icon', name: 'close' %}</template>
+      </button>
+
+      {% render 'header__menu' %}
+    </div>
+
+    <div class="flex items-center justify-center">
+      <a href="{{ routes.root_url }}" class="logo-image block" title="{{ shop.name }}">
+        {% render 'icon', name: 'logo', class: 'w-full max-w-[120px] md:max-w-[150px]' %}
+      </a>
+    </div>
+
+    <div class="flex-1 flex items-center justify-end space-x-3 lg:space-x-6">
+      <button @click="toggleFlyout('search')" type="button" class="flex items-center space-x-2">
+        {% render 'icon', name: 'search' %}
+        <span class="sr-only lg:not-sr-only">{{ 'general.search.submit' | t }}</span>
+      </button>
+
+      {% if shop.customer_accounts_enabled %}
+        <nav class="hidden lg:block">
+          <ul class="flex space-x-6" role="menu" aria-label="Customer links">
+            {% if customer %}
+              <li role="none" >
+                <a href="{{ routes.account_logout_url }}" role="menuitem">{{ 'layout.customer.log_out' | t }}</a>
+              </li>
+              <li role="none">
+                <a href="{{ routes.account_url }}" role="menuitem">{{ 'layout.customer.account' | t }}</a>
+              </li>
+            {% else %}
+              <li role="none">
+                <a href="{{ routes.account_login_url }}" role="menuitem">{{ 'layout.customer.log_in' | t }}</a>
+              </li>
+              <li role="none">
+                <a href="{{ routes.account_register_url }}" role="menuitem">{{ 'layout.customer.create_account' | t }}</a>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
+
+      <a href="{{ routes.cart_url }}" @click.prevent="toggleFlyout('minicart')" title="{{ 'layout.cart.title' | t }}">
+        <span class="flex items-center space-x-1">
+          {% render 'icon', name: 'cart' %}
+          <small v-if="cart && cart.item_count">${ cart.item_count }</small>
+        </span>
+      </a>
+    </div>
+  </div>
+</div>
+
+{% render 'header__search' %}
+{% render 'header__minicart' %}
+
+{% schema %}
+  {
+    "name": "Header",
+    "tag": "section",
+    "settings": [
+      {
+        "type": "header",
+        "content": "Navigation"
+      },
+      {
+        "type": "link_list",
+        "id": "menu",
+        "label": "Menu",
+        "default": "main-menu"
+      }
+    ]
+  }
+{% endschema %}
+
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "Organization",
+  "name": "{{ shop.name }}",
+  {% if settings.logo %}
+    "logo": "https:{{ settings.logo | image_url: width: 450 }}",
+  {% endif %}
+  "sameAs": [
+    "{{ settings.social_twitter_link }}",
+    "{{ settings.social_facebook_link }}",
+    "{{ settings.social_pinterest_link }}",
+    "{{ settings.social_instagram_link }}",
+    "{{ settings.social_tumblr_link }}",
+    "{{ settings.social_snapchat_link }}",
+    "{{ settings.social_youtube_link }}",
+    "{{ settings.social_vimeo_link }}"
+  ],
+  "url": "{{ shop.url }}{{ page.url }}"
+}
+</script>
+
+{% if template.name == 'index' %}
+  <script type="application/ld+json">
+    {
+      "@context": "http://schema.org",
+      "@type": "WebSite",
+      "name": "{{ shop.name }}",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "{{ shop.url }}/search?type=product&q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      },
+      "url": "{{ shop.url }}{{ page.url }}"
+    }
+  </script>
+{% endif %}

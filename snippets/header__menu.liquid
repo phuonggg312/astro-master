@@ -1,0 +1,59 @@
+<transition name="slide-from-left">
+  <div v-show="flyouts.menu" class="navigation-menu lg:block">
+    <nav aria-label="main">
+      <ul role="menu" class="menu lg:flex justify-center lg:space-x-6">
+        {% for link in linklists[section.settings.menu].links %}
+          <li role="none">
+            <a
+              v-init-megamenu="'{{ link.handle }}'"
+              role="menuitem"
+              href="{{ link.url }}"
+              title="{{ link.title | escape }}"
+              class="menu-link {%- if link.active %} menu-link--current {%- endif -%}"
+              :class="{ 'menu-link--active': megamenuToggles['{{ link.handle }}'] }">
+              <strong>{{ link.title | escape }}</strong>
+              <span class="menu-arrow" :class="{ 'menu-arrow--active': megamenuToggles['{{ link.handle }}'] }">{% render 'icon', name: 'arrow-down' %}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </nav>
+
+    {% if shop.customer_accounts_enabled %}
+      <nav class="lg:hidden border-top mt-4 py-3">
+        <ul
+          role="menu"
+          aria-label="Customer links"
+          class="menu">
+          {% if customer %}
+            <li role="none">
+              <a
+                href="{{ routes.account_logout_url }}"
+                role="menuitem"
+                class="menu-link">{{ 'layout.customer.log_out' | t }}</a>
+            </li>
+            <li role="none">
+              <a
+                href="{{ routes.account_url }}"
+                role="menuitem"
+                class="menu-link">{{ 'layout.customer.account' | t }}</a>
+            </li>
+          {% else %}
+            <li role="none">
+              <a
+                href="{{ routes.account_login_url }}"
+                role="menuitem"
+                class="menu-link">{{ 'layout.customer.log_in' | t }}</a>
+            </li>
+            <li role="none">
+              <a
+                href="{{ routes.account_register_url }}"
+                role="menuitem"
+                class="menu-link">{{ 'layout.customer.create_account' | t }}</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  </div>
+</transition>

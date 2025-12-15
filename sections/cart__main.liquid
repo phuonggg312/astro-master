@@ -1,0 +1,151 @@
+<div class="container" vue-init v-cloak>
+  {% render 'breadcrumbs' %}
+  
+  <h1 class="mb-8">{{ 'cart.general.title' | t }}</h1>
+
+  <cart inline-template>
+    <div v-if="cart" class="cart">
+      <div v-if="cart.item_count" class="md:flex justify-between">
+        {%- if section.settings.cart_notice != blank -%}
+          <div class="lg:basis-7/12">
+            <div class="rte">{{ section.settings.cart_notice }}</div>
+          </div>
+        {%- endif -%}
+
+        <aside class="md:basis-5/12 lg:basis-1/3 md:order-last mb-8">
+          <form action="{{ routes.cart_url }}" method="post" class="cart__summary bg-light-background rounded p-5 mb-6">
+            <div class="mb-4">
+              <div class="totals flex justify-between">
+                <span><strong>{{ 'cart.general.subtotal' | t }}</strong></span>
+                <span><strong>${ cart.total_price | currencyFromCents }</strong></span>
+              </div>
+            </div>
+
+            <p class="mb-4"><small>{{ 'cart.general.shipping_at_checkout' | t }}</small></p>
+
+            {% if section.settings.cart_notes_enable %}
+              <div class="field field--textarea">
+                <label class="label" for="CartNote">{{ 'cart.general.note' | t }}</label>
+                <textarea name="note" id="CartNote" class="cart__note">{{ cart.note }}</textarea>
+              </div>
+            {% endif %}
+
+            <input type="submit" name="checkout" class="button button--primary w-full" value="{{ 'cart.general.checkout' | t }}">
+          </form>
+
+          <div class="mb-6">
+            {% unless shop.enabled_payment_types == empty %}
+            <span class="sr-only">{{ 'layout.footer.payment_methods' | t }}</span>
+            <ul class="flex justify-center">
+              {% for type in shop.enabled_payment_types %}
+                <li class="mr-2">
+                  {{ type | payment_type_svg_tag }}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endunless %}
+          </div>
+
+          {%- if section.settings.extra_info != blank -%}
+            <div class="cart__extra-info rte mt-5">{{ section.settings.extra_info }}</div>
+          {%- endif -%}
+        </aside>
+
+        <section class="md:basis-7/12">
+          <div class="cart__items mb-5 space-y-5">
+            <div v-for="(item, index) in cart.items" :key="item.key" class="cart__item relative">
+              <div class="mask mask--loading" v-if="item.isLoading"><span class="spinner">{{ 'general.misc.loading' | t }}</span></div>
+              <div class="grid grid-cols-12 lg:grid-cols-6 gap-4">
+                <div class="cart__item__image col-span-5 lg:col-span-1">
+                  <a :href="item.url" :title="item.product_title">
+                    {%- comment -%}
+                    .product-image class used for forced aspect ratio settings
+                    {%- endcomment -%}
+                    <div class="product-image">
+                      <responsive-image
+                        v-if="item.image"
+                        :src="item.image.src | imageSize(128)"
+                        :base-width="128"
+                        :base-height="128 / item.image.aspect_ratio"
+                        sizes="128px"
+                        :alt="item.image.alt"
+                      ></responsive-image>
+                      <template v-else>{{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}</template>
+                    </div>
+                  </a>
+                </div>
+                <div class="col-span-7 lg:col-span-4 space-y-2">
+                  <a :href="item.url" class="inline-flex"><strong v-html="item.product_title"></strong></a>
+                  <div v-if="item.has_variant">
+                    <div v-for="option in item.options_with_values" :key="option.name">
+                      <strong>${ option.name }</strong>: <span>${ option.value }</span>
+                    </div>
+                  </div>
+                  <div v-if="Object.keys(publicProperties(item)).length">
+                    <div v-for="(value, key) in publicProperties(item)" class="minicart-item flex-column mb-1">
+                      <strong class="break-word minicart-item__label">${ key }:</strong> <span class="break-word minicart-item__value" v-html="value"></span>
+                    </div>
+                  </div>
+                  <div>
+                    <s v-if="item.compare_at_price" class="price price--old">${ item.compare_at_price | currencyFromCents }</s>
+                    <span class="price" :class="{ 'price--sale': item.compare_at_price }">${ item.final_price | currencyFromCents }</span>
+                  </div>
+                  <button @click="updateItem(item, 0)"><small>{{ 'cart.general.remove' | t }}</small></button>
+                  <div v-if="item.message">
+                    <small class="cart__item__message cart__item__message--error">${ item.message }</small>
+                  </div>
+                </div>
+                <div class="col-span-12 lg:col-span-1 flex flex-col lg:items-end mt-3 lg:mt-0 space-y-2">
+                  <quantity-field :value="item.quantity" @update-quantity="value => updateItem(item, item.quantity = value)" :is-zero-allowed="true"></quantity-field>
+                  <span class="price"><strong>${ item.final_line_price | currencyFromCents }</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-center lg:text-left">
+              <a href="{{ routes.root_url }}" class="link">{{ 'cart.general.continue_browsing' | t }}</a>
+            </div>
+          </div>
+
+          <input type="submit" name="checkout" class="button button--primary md:hidden w-full" value="{{ 'cart.general.checkout' | t }}">
+        </section>
+      </div>
+
+      {% comment %}
+      Cart empty state
+      {% endcomment %}
+      <div v-else class="text-center">
+        <div class="cart__empty">
+          <p class="my-5">{{ 'cart.general.empty' | t }}</p>
+          <a href="{{ routes.root_url }}" class="link">{{ 'cart.general.continue_browsing' | t }}</a>
+        </div>
+      </div>
+    </div>
+  </cart>
+</div>
+
+{% schema %}
+  {
+    "name": "Cart",
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "cart_notes_enable",
+        "label": "Enable cart notes",
+        "default": true
+      },
+      {
+        "type": "richtext",
+        "id": "cart_notice",
+        "label": "Cart notice",
+        "info": "Important information for users, will appear above cart items."
+      },
+      {
+        "type": "richtext",
+        "id": "extra_info",
+        "label": "Secondary information",
+        "info": "Appears below cart summary block."
+      }
+    ]
+  }
+{% endschema %}

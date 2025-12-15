@@ -1,0 +1,74 @@
+<div class="flex flex-col lg:flex-row lg:space-x-4">
+  
+  {% for level1 in linklists[section.settings.menu].links %}
+    <nav class="flex-1">
+      <ul 
+        class="menu"
+        role="menu"
+        aria-label="{{ section.settings.attach_to }}"
+      >
+        <li role="none">
+          <a 
+            v-init-megamenu="'{{ parent_handle }}__{{ level1.handle }}'"
+            href="{{ level1.url }}" 
+            class="menu-link {%- if level1.handle contains 'sale' %} text-sale {%- endif %}" 
+            role="menuitem"
+          >
+            <strong>{{ level1.title | escape }}</strong>
+            <span class="menu-arrow" :class="{ 'menu-arrow--active': megamenuToggles['{{ parent_handle }}__{{ level1.handle }}'] }">{% render 'icon', name: 'arrow-down' %}</span>
+          </a>
+        </li>
+  
+        {%- if level1.links.size > 0 -%}
+          <transition name="megamenu">
+            <ul 
+              parent-item="{{ parent_handle }}__{{ level1.handle }}"
+              v-show="megamenuToggles['{{ parent_handle }}__{{ level1.handle }}']"
+              class="menu lg:block"
+              role="menu"
+              aria-label="{{ level1.title }}"
+            >
+              {% for level2 in level1.links %}
+                <li role="none">
+                  <a 
+                    v-init-megamenu="'{{ parent_handle }}__{{ level1.handle }}__{{ level2.handle }}'" 
+                    href="{{ level2.url }}" 
+                    class="menu-link" 
+                    role="menuitem"
+                  >
+                    <span>{{ level2.title | escape }}</span>
+                    <span class="menu-arrow" :class="{ 'menu-arrow--active': megamenuToggles['{{ parent_handle }}__{{ level1.handle }}__{{ level2.handle }}'] }">{% render 'icon', name: 'arrow-down' %}</span>
+                  </a>
+  
+                  {%- if level2.links.size > 0 -%}
+                    <transition name="megamenu">
+                      <ul 
+                        parent-item="{{ parent_handle }}__{{ level1.handle }}__{{ level2.handle }}"
+                        v-show="megamenuToggles['{{ parent_handle }}__{{ level1.handle }}__{{ level2.handle }}']"
+                        class="menu lg:block"
+                        role="menu"
+                        aria-label="{{ level2.title }}"
+                      >
+                        {% for level3 in level2.links %}
+                          <li role="none">
+                            <a 
+                              href="{{ level3.url }}" 
+                              class="menu-link" 
+                              role="menuitem"
+                            >
+                              <span>{{ level3.title | escape }}</span>
+                            </a>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    </transition>
+                  {%- endif -%}
+                </li>
+              {% endfor %}
+            </ul>
+          </transition>
+        {%- endif -%}
+      </ul>
+    </nav>
+  {% endfor %}
+</div>

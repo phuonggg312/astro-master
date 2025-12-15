@@ -1,0 +1,40 @@
+{%- if section.blocks.size > 0 -%}
+  <div class="flex flex-wrap gap-4">
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'cta' -%}
+
+        {%- capture content -%}
+          {%- if block.settings.image -%}
+            <responsive-image
+              src="{{ block.settings.image | image_url: width: 464 }}"
+              :base-width="464"
+              :base-height="{{ 464 | divided_by: block.settings.image.aspect_ratio }}"
+              sizes="464px"
+              alt="{{ block.settings.image.alt }}"
+            ></responsive-image>
+          {%- else -%}
+            {{ 'image' | placeholder_svg_tag: 'placeholder-svg placeholder-svg--landscape' }}
+          {%- endif -%}
+          {%- if block.settings.title != blank -%}
+            <div class="cta__title">{{ block.settings.title }}</div>
+          {%- endif -%}
+        {%- endcapture -%}
+
+        {%- assign divisor = section.blocks.size | at_most: 4 -%}
+
+        <div class="lg:flex-1 min-w-[25%]">
+          <div class="cta">
+            {%- if block.settings.url != blank -%}
+              <a href="{{ block.settings.url }}" title="{{ block.settings.title }}">
+                {{ content }}
+              </a>
+            {%- else -%}
+              {{ content }}
+            {%- endif -%}
+          </div>
+        </div>
+
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+{%- endif -%}
