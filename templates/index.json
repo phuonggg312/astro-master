@@ -15,7 +15,6 @@
         "slide-1": {
           "type": "slide",
           "settings": {
-            "image": "shopify://shop_images/person-fishing-on-the-beach-is-silhouetted-at-sunset.jpg",
             "title": "Sunset",
             "url": ""
           }
@@ -24,7 +23,9 @@
       "block_order": [
         "slide-1"
       ],
-      "settings": {}
+      "settings": {
+        "is_above_the_fold": false
+      }
     },
     "spacer": {
       "type": "index__spacer",
@@ -36,7 +37,8 @@
     "featured-products": {
       "type": "index__featured-products",
       "settings": {
-        "title": "Feature products"
+        "title": "Feature products",
+        "product_list": []
       }
     }
   },

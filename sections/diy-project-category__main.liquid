@@ -1,0 +1,252 @@
+{%- assign category_handle = metaobject.handle | default: request.path | split: '/' | last -%}
+{%- assign category_title = metaobject.display_name | default: metaobject.handle | replace: '-', ' ' | capitalize -%}
+
+<div class="w-full">
+  <div class="max-w-screen-xl mx-auto px-4 lg:px-6">
+    <div class="relative mb-8">
+      <div class="flex items-center justify-between py-3 border-b border-gray-300">
+        <h1 class="mb-0 text-lg font-bold" id="category-title">
+          {{ section.settings.title | default: category_title }}
+        </h1>
+        <div class="breadcrumb-wrapper uppercase flex items-center text-[10px] leading-[1.4]">
+          {% render 'breadcrumbs', category_title: category_title %}
+        </div>
+      </div>
+    </div>
+
+    <div id="category-references" class="mb-8" style="display: none;">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+    </div>
+
+    <div vue-init v-cloak>
+      <diy-project-category-listing 
+        inline-template
+        category-handle="{{ category_handle }}"
+        :initial-title="'{{ category_title | escape }}'">
+        <div>
+          <div v-if="isLoading" class="text-center py-12">
+            <p class="lead">{{ 'general.misc.loading' | t }}</p>
+            <div class="loading-animation">
+              <div class="bounce1"></div>
+              <div class="bounce2"></div>
+              <div class="bounce3"></div>
+            </div>
+          </div>
+
+          <div v-else-if="error" class="text-center py-12">
+            <p class="text-error">${ error }</p>
+          </div>
+
+          <div v-else-if="projects.length === 0" class="text-center py-12">
+            <p class="lead">NO ITEMS!</p>
+          </div>
+
+          <div v-else>
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+              <div class="flex items-center gap-4 flex-wrap">
+                <div class="field">
+                  <label for="items-per-page" class="sr-only">{{ 'collections.general.products_count' | t }}</label>
+                  <select 
+                    id="items-per-page"
+                    v-model="itemsPerPage" 
+                    @change="handleItemsPerPageChange"
+                    class="select text-sm border border-black bg-white min-w-[300px]">
+                    <option value="10">Show 10 items</option>
+                    <option value="20">Show 20 items</option>
+                    <option value="40">Show 40 items</option>
+                    <option value="60">Show 60 items</option>
+                    <option value="80">Show All</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="sort-by" class="sr-only">{{ 'collections.sorting.title' | t }}</label>
+                  <select 
+                    id="sort-by"
+                    v-model="sortBy" 
+                    @change="handleSortChange"
+                    class="select text-sm border border-black bg-white min-w-[300px]">
+                    <option value="newest">Sorted by: Newest to Oldest</option>
+                    <option value="oldest">Sorted by: Oldest to Newest</option>
+                    <option value="title_asc">Sorted by: A - Z</option>
+                    <option value="title_desc">Sorted by: Z - A</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-4">
+                <span class="text-sm">${ totalItems } items</span>
+                <div class="pagination" v-if="totalPages > 1">
+                  <button 
+                    v-if="currentPage > 1"
+                    @click="goToPage(currentPage - 1)"
+                    class="pagination__item">
+                    &lt;
+                  </button>
+                  <button
+                    v-for="page in visiblePages"
+                    :key="page"
+                    @click="goToPage(page)"
+                    class="pagination__item"
+                    :class="{ 'pagination__item--active': page === currentPage }">
+                    ${ page }
+                  </button>
+                  <button 
+                    v-if="currentPage < totalPages"
+                    @click="goToPage(currentPage + 1)"
+                    class="pagination__item">
+                    &gt;
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <div v-for="project in displayedProjects" :key="project.id" class="diy-project-item">
+                {% render 'diy-project-item-card' %}
+              </div>
+            </div>
+
+            <div class="flex justify-end mb-8" v-if="totalPages > 1">
+              <div class="pagination">
+                <button 
+                  v-if="currentPage > 1"
+                  @click="goToPage(currentPage - 1)"
+                  class="pagination__item">
+                  &lt;
+                </button>
+                <button
+                  v-for="page in visiblePages"
+                  :key="page"
+                  @click="goToPage(page)"
+                  class="pagination__item"
+                  :class="{ 'pagination__item--active': page === currentPage }">
+                  ${ page }
+                </button>
+                <button 
+                  v-if="currentPage < totalPages"
+                  @click="goToPage(currentPage + 1)"
+                  class="pagination__item">
+                  &gt;
+                </button>
+              </div>
+            </div>
+
+            <div v-if="category && category.description">
+              <div class="sub_heading mb-4">
+                <span>${ category.title ? category.title.toUpperCase() : '{{ category_title | upcase }}' }</span>
+              </div>
+              <read-more :less-height="70" class="text-left mx-auto">
+                <div v-html="category.description"></div>
+              </read-more>
+            </div>
+          </div>
+        </div>
+      </diy-project-category-listing>
+    </div>
+  </div>
+</div>
+
+
+<style>
+  .sub_heading {
+    position: relative;
+    line-height: 50px;
+    font-size: 20px;
+    text-transform: uppercase;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  .sub_heading span {
+    position: relative;
+    padding: 0 20px;
+    display: inline-block;
+    background: transparent;
+  }
+
+  .sub_heading::before,
+  .sub_heading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 34%;
+    max-width: 480px;
+    height: 2px;
+    background: #e0e0e0;
+  }
+
+  .sub_heading::before {
+    left: 0;
+  }
+
+  .sub_heading::after {
+    right: 0;
+  }
+
+  .pagination {
+    display: flex;
+    gap: 4px;
+  }
+
+  .pagination__item {
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e0e0e0;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 0;
+  }
+
+  .pagination__item:hover:not(.pagination__item--disabled):not(.pagination__item--active) {
+    background: #f5f5f5;
+  }
+
+  .pagination__item--active {
+    background: #000;
+    color: white;
+    border-color: #000;
+  }
+
+  .pagination__item--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    border-radius: 0;
+  }
+</style>
+
+{% schema %}
+  {
+    "name": "DIY Project Category Main",
+    "tag": "section",
+    "settings": [
+      {
+        "type": "text",
+        "id": "title",
+        "label": "Title",
+        "info": "Leave blank to use metaobject title"
+      }
+    ],
+    "presets": [
+      {
+        "name": "DIY Project Category Main",
+        "category": "DIY Projects"
+      }
+    ]
+  }
+{% endschema %}
+

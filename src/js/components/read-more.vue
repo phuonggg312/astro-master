@@ -11,14 +11,16 @@
       v-if="isEnabled && !isReadingMore"
       href="javascript:"
       role="button"
+      class="read-more-link"
       @click.prevent="readMore"
-    >read more</a>
+    >READ MORE</a>
     <a
       v-else-if="isEnabled"
       href="javascript:"
       role="button"
+      class="read-more-link"
       @click.prevent="readLess"
-    >read less</a>
+    >READ LESS</a>
   </div>
 </template>
 
@@ -42,10 +44,15 @@ export default {
   computed: {
     contentStyle () {
       if (!this.isEnabled) return {}
-      const h = this.isReadingMore ? this.contentHeight : this.lessHeight
+      if (this.isReadingMore) {
+        return {
+          height: 'auto',
+          maxHeight: 'none'
+        }
+      }
       return {
-        height: h + 'px',
-        maxHeight: h + 'px'
+        height: this.lessHeight + 'px',
+        maxHeight: this.lessHeight + 'px'
       }
     }
   },
@@ -90,11 +97,17 @@ export default {
   text-align: center;
 }
 
-a {
+a.read-more-link {
   text-decoration: none;
   text-transform: uppercase;
   font-weight: 700;
   display: inline-block;
   margin-top: 10px;
+  color: inherit;
+  cursor: pointer;
+}
+
+a.read-more-link:hover {
+  text-decoration: underline;
 }
 </style>

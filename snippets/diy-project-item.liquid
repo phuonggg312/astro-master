@@ -1,5 +1,5 @@
 <a 
-  :href="'/diy-projects/' + project.handle" 
+  :href="'/pages/diy-project-category/' + project.handle" 
   class="block group"
   :title="project.title || 'Untitled Project'">
   
@@ -9,6 +9,7 @@
           :src="project.image"
           :base-width="468"
           :base-height="468"
+          :base-aspect-ratio="1"
           sizes="(max-width: 767px) 50vw, (max-width: 1440px) 25vw, calc(1440px / 4)"
           :alt="project.title || 'Untitled Project'"
           class="w-full"

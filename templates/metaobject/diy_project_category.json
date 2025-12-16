@@ -1,0 +1,23 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "diy_project_category_main_9k6n6Q": {
+      "type": "diy-project-category__main",
+      "name": "DIY Project Category Main",
+      "settings": {
+        "title": ""
+      }
+    }
+  },
+  "order": [
+    "diy_project_category_main_9k6n6Q"
+  ]
+}

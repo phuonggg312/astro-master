@@ -1,4 +1,4 @@
-<nav aria-label="breadcrumb" class="mb-4">
+<nav aria-label="breadcrumb">
   <ol class="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList" style="font-size:10px; line-height:1.4;">
     <li class="breadcrumb__item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
       <a href="{{ shop.url }}" title="{{ shop.name | escape }}" itemprop="item" itemscope itemtype="http://schema.org/Thing" itemid="/">
@@ -6,7 +6,54 @@
       </a>
       <meta itemprop="position" content="1" />
     </li>
-
+    {%- assign is_diy_category = false -%}
+    {%- if metaobject and metaobject.type == 'diy_project_category' -%}
+      {%- assign is_diy_category = true -%}
+    {%- elsif template.name == 'metaobject' and metaobject and metaobject.type == 'diy_project_category' -%}
+      {%- assign is_diy_category = true -%}
+    {%- elsif request.path contains '/diy-project-category/' -%}
+      {%- assign is_diy_category = true -%}
+    {%- endif -%}
+    
+    {%- if is_diy_category -%}
+      <li class="breadcrumb__item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+        <a href="/pages/diy-projects" title="DIY Projects" itemprop="item" itemscope itemtype="http://schema.org/Thing" itemid="/pages/diy-projects">
+          <span itemprop="name">DIY PROJECTS</span>
+        </a>
+        <meta itemprop="position" content="2" />
+      </li>
+      <li class="breadcrumb__item breadcrumb__item--active" aria-current="page" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+        <span itemscope itemtype="http://schema.org/Thing" itemprop="item" itemid="{{ request.path }}">
+          {%- assign final_category_title = passed_category_title -%}
+          {%- if final_category_title == blank -%}
+            {%- if metaobject -%}
+              {%- if metaobject.display_name != blank -%}
+                {%- assign final_category_title = metaobject.display_name -%}
+              {%- else -%}
+                {%- for field in metaobject.fields -%}
+                  {%- if field.key == 'title' -%}
+                    {%- assign final_category_title = field.value -%}
+                    {%- break -%}
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endif -%}
+              {%- if final_category_title == blank -%}
+                {%- assign final_category_title = metaobject.handle | replace: '-', ' ' | capitalize -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endif -%}
+          {%- if final_category_title == blank -%}
+            {%- assign url_parts = request.path | split: '/' -%}
+            {%- assign last_part = url_parts | last -%}
+            {%- if last_part != blank and last_part != 'diy-project-category' -%}
+              {%- assign final_category_title = last_part | replace: '-', ' ' | capitalize -%}
+            {%- endif -%}
+          {%- endif -%}
+          <span itemprop="name">{{ final_category_title | upcase }}</span>
+        </span>
+        <meta itemprop="position" content="3" />
+      </li>
+    {%- else -%}
     {%- case template.name -%}
 
       {%- when 'product' -%}
@@ -68,18 +115,59 @@
           <meta itemprop="position" content="3" />
         </li>
 
-      {% else %}
+      {%- when 'metaobject' -%}
+        {%- comment -%} Breadcrumb for metaobject pages {%- endcomment -%}
+        {%- if metaobject.type == 'diy_project_category' -%}
+          <li class="breadcrumb__item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <a href="/pages/diy-projects" title="DIY Projects" itemprop="item" itemscope itemtype="http://schema.org/Thing" itemid="/pages/diy-projects">
+              <span itemprop="name">DIY PROJECTS</span>
+            </a>
+            <meta itemprop="position" content="2" />
+          </li>
+          <li class="breadcrumb__item breadcrumb__item--active" aria-current="page" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <span itemscope itemtype="http://schema.org/Thing" itemprop="item" itemid="{{ request.path }}">
+              {%- assign final_category_title = passed_category_title -%}
+              {%- if final_category_title == blank -%}
+                {%- if metaobject.display_name != blank -%}
+                  {%- assign final_category_title = metaobject.display_name -%}
+                {%- else -%}
+                  {%- for field in metaobject.fields -%}
+                    {%- if field.key == 'title' -%}
+                      {%- assign final_category_title = field.value -%}
+                      {%- break -%}
+                    {%- endif -%}
+                  {%- endfor -%}
+                {%- endif -%}
+                {%- if final_category_title == blank -%}
+                  {%- assign final_category_title = metaobject.handle | replace: '-', ' ' | capitalize -%}
+                {%- endif -%}
+              {%- endif -%}
+              <span itemprop="name">{{ final_category_title | upcase }}</span>
+            </span>
+            <meta itemprop="position" content="3" />
+          </li>
+        {%- else -%}
+          <li class="breadcrumb__item breadcrumb__item--active" aria-current="page" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <span itemscope itemtype="http://schema.org/Thing" itemprop="item" itemid="{{ request.path }}">
+              <span itemprop="name">{{ metaobject.fields.title.value | default: metaobject.handle | upcase }}</span>
+            </span>
+            <meta itemprop="position" content="2" />
+          </li>
+        {%- endif -%}
+
+      {%- else -%}
         <li class="breadcrumb__item breadcrumb__item--active" aria-current="page" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
-					<span itemscope itemtype="http://schema.org/Thing" itemprop="item" itemid="{{ request.path }}">
+          <span itemscope itemtype="http://schema.org/Thing" itemprop="item" itemid="{{ request.path }}">
             {%- if page.title -%}
-							<span itemprop="name">{{ page.title }}</span>
+              <span itemprop="name">{{ page.title }}</span>
             {%- else -%}
-							<span itemprop="name">{{ page_title }}</span>
+              <span itemprop="name">{{ page_title }}</span>
             {%- endif -%}
-					</span>
-					<meta itemprop="position" content="2" />
-				</li>
+          </span>
+          <meta itemprop="position" content="2" />
+        </li>
 
     {%- endcase -%}
+    {%- endif -%}
   </ol>
 </nav>

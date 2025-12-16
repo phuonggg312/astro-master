@@ -17,7 +17,6 @@ export default {
       this.isRecoverPasswordShown = true
     }
   },
-
   methods: {
     toggleRecoverPassword () {
       this.isRecoverPasswordShown = !this.isRecoverPasswordShown

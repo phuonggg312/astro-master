@@ -1,0 +1,27 @@
+<a 
+  :href="'/metaobjects/diy_project/' + project.handle" 
+  class="block group"
+  :title="project.title || 'Untitled Project'">
+  <div class="relative mb-4 overflow-hidden">
+    <responsive-image
+      v-if="project.image"
+      :src="project.image"
+      :base-width="468"
+      :base-height="468"
+      sizes="(max-width: 767px) 50vw, (max-width: 1440px) 25vw, calc(1440px / 4)"
+      :alt="project.title || 'Untitled Project'"
+      class="w-full"
+    ></responsive-image>
+    <template v-else>
+      {{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}
+    </template>
+    <span class="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></span>
+  </div>
+  <div class="text-left">
+    <div v-if="project.sku || project.product_code" class="text-xs text-gray-600 mb-1 uppercase">
+      ${ project.sku || project.product_code || '' }
+    </div>
+    <h3 class="h5 normal-case font-bold mt-1" v-html="project.title || 'Untitled Project'"></h3>
+  </div>
+</a>
+

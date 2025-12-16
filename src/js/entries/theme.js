@@ -25,6 +25,7 @@ import CustomerAddresses from '@/js/templates/customer-addresses.js'
 import CustomerLogin from '@/js/templates/customer-login.js'
 import Cart from '@/js/templates/cart.js'
 import DiyProjectsListing from '@/js/templates/diy-projects.js'
+import DiyProjectCategoryListing from '@/js/templates/diy-project-category.js'
 
 Vue.component('ResponsiveImage', ResponsiveImage)
 Vue.component('ButtonSpinner', ButtonSpinner)
@@ -49,7 +50,8 @@ const initVueInstance = element => {
       CustomerAddresses,
       CustomerLogin,
       Cart,
-      DiyProjectsListing
+      DiyProjectsListing,
+      DiyProjectCategoryListing
     }
   })
 }

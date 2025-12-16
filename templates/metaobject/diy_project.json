@@ -1,0 +1,15 @@
+{
+  "sections": {
+    "main": {
+      "type": "diy-project-category__main",
+      "name": "DIY Project Main",
+      "settings": {
+        "title": ""
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}
+
