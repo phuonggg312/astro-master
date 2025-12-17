@@ -1,5 +1,5 @@
 <a 
-  :href="'/metaobjects/diy_project/' + project.handle" 
+  :href="'/pages/diy-projects/' + project.handle"
   class="block group"
   :title="project.title || 'Untitled Project'">
   <div class="relative mb-4 overflow-hidden">
@@ -15,6 +15,7 @@
     <template v-else>
       {{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}
     </template>
+    
     <span class="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></span>
   </div>
   <div class="text-left">

@@ -1,0 +1,414 @@
+{%- liquid
+  assign project_title = ''
+  assign project_sku = ''
+  assign project_description = ''
+  assign project_image = null
+  assign skill_level = ''
+  assign product_handle = ''
+  assign category_handle = ''
+  assign category_title = ''
+  
+  if metaobject != blank
+    assign project_title = metaobject.display_name
+    
+    if metaobject.fields != blank
+      for field in metaobject.fields
+        case field.key
+          when 'title'
+            assign project_title = field.value
+          when 'sku'
+            assign project_sku = field.value
+          when 'description'
+            assign project_description = field.value
+          when 'image'
+            if field.reference
+              assign project_image = field.reference.image | default: field.reference
+            endif
+          when 'skill_level'
+            assign skill_level = field.value
+          when 'product_handle'
+            if field.reference
+              assign product_handle = field.reference.handle
+            else
+              assign product_handle = field.value
+            endif
+          when 'category'
+            if field.reference
+              assign category_handle = field.reference.handle
+              assign category_title = field.reference.display_name
+              if category_title == blank
+                for cat_field in field.reference.fields
+                  if cat_field.key == 'title'
+                    assign category_title = cat_field.value
+                    break
+                  endif
+                endfor
+              endif
+            endif
+        endcase
+      endfor
+    endif
+  endif
+  
+  if project_title == blank
+    if metaobject != blank
+      assign project_title = metaobject.handle | replace: '-', ' ' | capitalize
+    else
+      assign project_title = 'DIY Project'
+    endif
+  endif
+-%}
+
+<div class="container">
+  {%- assign project_handle = metaobject.handle | default: '' -%}
+  {%- if project_handle == blank -%}
+    {%- assign path_parts = request.path | split: '/' -%}
+    {%- if path_parts[1] == 'pages' and path_parts[2] == 'diy-projects' -%}
+      {%- assign project_handle = path_parts[3] -%}
+    {%- elsif path_parts[1] == 'metaobjects' and path_parts[2] == 'diy_projects' -%}
+      {%- assign project_handle = path_parts[3] -%}
+    {%- endif -%}
+  {%- endif -%}
+
+  <div vue-init v-cloak>
+    <diy-project-detail
+      inline-template
+      :metaobject="{% if metaobject %}{{ metaobject | json | escape }}{% else %}{}{% endif %}"
+      project-handle="{{ project_handle }}"
+      product-handle="{{ product_handle }}"
+      category-handle="{{ category_handle }}"
+      category-title="{{ category_title }}">
+      
+      <div class="diy-project-detail">
+        <div v-if="isLoading" class="text-center py-12">
+          <p class="lead">{{ 'general.misc.loading' | t }}</p>
+          <div class="loading-animation">
+            <div class="bounce1"></div>
+            <div class="bounce2"></div>
+            <div class="bounce3"></div>
+          </div>
+        </div>
+
+        <div v-else-if="error" class="text-center py-12">
+          <p class="text-error">${ error }</p>
+          <p class="text-sm text-gray-600 mt-2">Please try refreshing the page.</p>
+        </div>
+
+        <template v-else>
+          <div class="w-full gap-8 md:grid grid-cols-[35%_1fr] mb-8">
+            <div class="relative">
+              <div v-if="projectImage" class="image-gallery">
+                <responsive-image
+                  :src="projectImage"
+                  :base-width="1000"
+                  :base-height="1000"
+                  sizes="(max-width: 767px) 100vw, (max-width: 1440px) 35vw, calc(1440px * 0.35)"
+                  :alt="projectTitle"
+                  class="w-full">
+                </responsive-image>
+              </div>
+              <div v-else class="image-gallery">
+                {{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}
+              </div>
+            </div>
+            
+            <div class="project-info">
+              <h3 class="mb-3">${ projectTitle || '{{ project_title }}' }</h3>
+              
+              <div class="breadcrumb-wrapper uppercase flex items-center mb-5 text-[10px] leading-[1.4]">
+                {% render 'breadcrumbs', category_title: category_title, category_handle: category_handle %}
+              </div>
+              
+              <div class="flex gap-4 mb-4 pb-4 border-b border-gray-300 diy-project-buttons">
+                <button 
+                  @click="scrollToSupplies"
+                  class="button button--primary flex items-center gap-2 diy-project-btn">
+                  {% render 'icon', name: 'cart' %}
+                  VIEW SUPPLY LIST
+                </button>
+                <button 
+                  @click="printProject"
+                  class="button button--primary flex items-center gap-2 diy-project-btn">
+                  {% render 'icon', name: 'print' %}
+                  PRINT PROJECT
+                </button>
+              </div>
+              
+              <div v-if="projectSku || '{{ project_sku }}'" class="mb-4 text-sm text-gray-600">
+                ITEM: ${ projectSku || '{{ project_sku }}' }
+              </div>
+              
+              <div v-if="projectDescription || '{{ project_description }}'" class="mb-6" v-html="projectDescription || '{{ project_description }}'"></div>
+              
+              <div v-if="skillLevel || '{{ skill_level }}'" class="mb-6">
+                <a href="/pages/ki-skill-levels" class="skill-level-badge">Skill Level: ${ skillLevel || '{{ skill_level }}' }</a>
+              </div>
+              
+              <div class="flex items-center gap-4">
+                {% render 'social-sharing', 
+                  share_permalink: request.path,
+                  share_title: project_title,
+                  share_image: project_image %}
+              </div>
+            </div>
+          </div>
+          
+          <section class="supplies-section" id="supplies">
+          <div class="supplies-header flex items-center justify-between mb-6">
+            <h2 class="h3">Supplies</h2>
+            <button 
+              v-if="productHandle || product"
+              @click="addProductToCart"
+              :disabled="isAddingToCart"
+              class="button button--primary">
+              <span v-if="isAddingToCart">Adding...</span>
+              <span v-else>ADD ALL MATERIALS TO CART</span>
+            </button>
+          </div>
+          
+          <div v-if="productHandle || product" class="product-container">
+            <div v-if="product" class="supplies-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <product-item
+                inline-template
+                :product="product"
+                :featured-media="product.featured_media"
+                :url="'/products/' + (productHandle || product.handle)"
+                img-sizes="(max-width: 767px) 50vw, (max-width: 1440px) 25vw, calc(1440px / 4)">
+                {% render 'product-item' %}
+              </product-item>
+            </div>
+            <div v-else class="text-center py-8">
+              <p class="text-gray-600">Loading product...</p>
+            </div>
+          </div>
+          
+          <div v-else-if="supplies && supplies.length > 0" class="supplies-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div v-for="product in supplies" :key="product.id" class="supply-item">
+            </div>
+          </div>
+        </section>
+        </template>
+      </div>
+    </diy-project-detail>
+  </div>
+</div>
+
+<style>
+  .diy-project-detail {
+    padding: 2rem 0;
+  }
+  
+  .diy-project-detail .image-gallery {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+  }
+  
+  .diy-project-detail .image-gallery img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .diy-project-detail .project-info {
+    padding-left: 2rem;
+    min-width: 0;
+    flex: 1;
+  }
+  
+  @media (max-width: 767px) {
+    .diy-project-detail .project-info {
+      padding-left: 0;
+      margin-top: 2rem;
+    }
+    
+    .diy-project-detail .w-full.gap-8.md\:grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .skill-level-badge {
+    display: inline-block;
+    padding: 4px 0;
+    color: #787878;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: capitalize;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  
+  .skill-level-badge:hover {
+    color: #4f8fbf;
+  }
+  
+  .supplies-section {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+  }
+  
+  .diy-project-detail .rte {
+    line-height: 1.6;
+  }
+  
+  .diy-project-detail .rte p:not(:last-child) {
+    margin-bottom: 1rem;
+  }
+  
+  .diy-project-detail .diy-project-btn {
+    background-color: #4f8fbf !important;
+    color: white !important;
+    font-weight: bold !important;
+    border: 1px solid #4f8fbf !important;
+    position: relative;
+  }
+  
+  .diy-project-detail .diy-project-btn:hover {
+    background-color: white !important;
+    color: #4f8fbf !important;
+    border-color: #4f8fbf !important;
+  }
+  
+  .diy-project-detail .diy-project-btn:hover svg,
+  .diy-project-detail .diy-project-btn:hover .icon {
+    color: #4f8fbf !important;
+    fill: #4f8fbf !important;
+  }
+  
+  .diy-project-detail .diy-social-sharing {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .diy-project-detail .diy-social-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    color: white;
+    font-weight: 500;
+    font-size: 14px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+  }
+  
+  .diy-project-detail .diy-social-btn:hover {
+    opacity: 0.9;
+  }
+  
+  .diy-project-detail .diy-social-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  
+  .diy-project-detail .diy-social-btn-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    color: white;
+  }
+  
+  .diy-project-detail .diy-social-btn-text {
+    color: white;
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  
+  .diy-project-detail .diy-social-btn--facebook {
+    background-color: #1877F2;
+  }
+  
+  .diy-project-detail .diy-social-btn--pinterest {
+    background-color: #E60023;
+  }
+  
+  .diy-project-detail .diy-social-btn--twitter {
+    background-color: #000000;
+  }
+  
+  .diy-project-detail .diy-social-btn--print {
+    background-color: #4CAF50;
+  }
+  
+  .diy-project-detail .diy-social-btn--email {
+    background-color: #4285F4;
+  }
+  
+  @media print {
+    @page {
+      margin: 0;
+      size: auto;
+    }
+    
+    header,
+    .header,
+    footer,
+    section[class*="footer"],
+    .announcement-bar,
+    .diy-project-detail .diy-project-btn,
+    .diy-project-detail .diy-social-sharing,
+    .diy-project-detail .supplies-section,
+    time,
+    [datetime],
+    .date,
+    .timestamp {
+      display: none !important;
+    }
+    
+    .diy-project-detail {
+      padding: 2rem 0 0;
+      max-width: 100%;
+    }
+    
+    .diy-project-detail .w-full.gap-8.md\:grid {
+      display: grid;
+      grid-template-columns: 35% 1fr;
+      gap: 1rem;
+    }
+    
+    .diy-project-detail .image-gallery {
+      width: 100%;
+    }
+    
+    .diy-project-detail .image-gallery img {
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+    }
+    
+    .diy-project-detail .project-info {
+      padding-left: 1rem;
+    }
+    
+    .diy-project-detail h3 {
+      margin-bottom: 0.5rem;
+    }
+    
+    .diy-project-detail .breadcrumb-wrapper {
+      margin-bottom: 0.5rem;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "DIY Project Main",
+  "tag": "section",
+  "settings": []
+}
+{% endschema %}
+

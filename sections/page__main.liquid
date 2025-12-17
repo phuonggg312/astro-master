@@ -1,5 +1,12 @@
 <div class="container">
-  <h1>{{ page.title }}</h1>
+  <div class="flex items-center justify-between mb-5">
+    <h1 class="mb-0">{{ page.title }}</h1>
+    {%- if request.path == '/pages/ki-skill-levels' -%}
+      <div class="breadcrumb-wrapper uppercase flex items-center text-[10px] leading-[1.4]">
+        {% render 'breadcrumbs' %}
+      </div>
+    {%- endif -%}
+  </div>
 
   <section>
     {{ page.content }}

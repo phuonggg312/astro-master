@@ -1,25 +1,48 @@
-<div class="flex items-center space-x-2">
+<div class="flex items-center gap-3 flex-wrap diy-social-sharing">
   {% if settings.share_facebook %}
-    <a target="_blank" href="//www.facebook.com/sharer.php?u={{ shop.url | append: share_permalink }}">
-      {% render 'icon', name: 'facebook' %}
-      <span aria-hidden="true">{{ 'general.social.share_on_facebook' | t }}</span>
+    <a target="_blank" href="//www.facebook.com/sharer.php?u={{ shop.url | append: share_permalink }}" class="diy-social-btn diy-social-btn--facebook flex gap-2">
+      <div class="diy-social-btn-icon">
+        {% render 'icon', name: 'facebook' %}
+      </div>
+      <span class="diy-social-btn-text">Share</span>
       <span class="sr-only">{{ 'general.social.alt_text.share_on_facebook' | t }}</span>
     </a>
   {% endif %}
 
+  {% if settings.share_pinterest %}
+    <a target="_blank" href="//pinterest.com/pin/create/button/?url={{ shop.url | append: share_permalink }}&amp;media={{ share_image | image_url: width: 1024, height: 1024 }}&amp;description={{ share_title | url_param_escape }}" class="diy-social-btn diy-social-btn--pinterest flex gap-2">
+      <div class="diy-social-btn-icon">
+        {% render 'icon', name: 'pinterest' %}
+      </div>
+      <span class="diy-social-btn-text">Save</span>
+      <span class="sr-only">{{ 'general.social.alt_text.share_on_pinterest' | t }}</span>
+    </a>
+  {% endif %}
+
   {% if settings.share_twitter %}
-    <a target="_blank" href="//twitter.com/share?text={{ share_title | url_param_escape }}&amp;url={{ shop.url | append: share_permalink }}">
-      {% render 'icon', name: 'twitter' %}
-      <span aria-hidden="true">{{ 'general.social.share_on_twitter' | t }}</span>
+    <a target="_blank" href="//twitter.com/share?text={{ share_title | url_param_escape }}&amp;url={{ shop.url | append: share_permalink }}" class="diy-social-btn diy-social-btn--twitter  flex gap-2">
+      <div class="diy-social-btn-icon">
+        {% render 'icon', name: 'twitter' %}
+      </div>
+      <span class="diy-social-btn-text">Post</span>
       <span class="sr-only">{{ 'general.social.alt_text.share_on_twitter' | t }}</span>
     </a>
   {% endif %}
 
-  {% if settings.share_pinterest %}
-    <a target="_blank" href="//pinterest.com/pin/create/button/?url={{ shop.url | append: share_permalink }}&amp;media={{ share_image | image_url: width: 1024, height: 1024 }}&amp;description={{ share_title | url_param_escape }}">
-      {% render 'icon', name: 'pinterest' %}
-      <span aria-hidden="true">{{ 'general.social.share_on_pinterest' | t }}</span>
-      <span class="sr-only">{{ 'general.social.alt_text.share_on_pinterest' | t }}</span>
-    </a>
-  {% endif %}
+  <button type="button" onclick="window.print()" class="diy-social-btn diy-social-btn--print flex gap-2">
+    <div class="diy-social-btn-icon">
+      {% render 'icon', name: 'print' %}
+    </div>
+    <span class="diy-social-btn-text">Print</span>
+  </button>
+
+  <a href="mailto:?subject={{ share_title | url_param_escape }}&body={{ shop.url | append: share_permalink | url_param_escape }}" class="diy-social-btn diy-social-btn--email flex gap-2">
+    <div class="diy-social-btn-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+      </svg>
+    </div>
+    <span class="diy-social-btn-text">Email</span>
+  </a>
 </div>

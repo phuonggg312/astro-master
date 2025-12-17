@@ -174,6 +174,11 @@ export default {
       await loadCategory()
     })
 
+    function handleProjectClick (project) {
+      const url = `/pages/diy-projects/${project.handle}`
+      window.location.href = url
+    }
+
     return {
       projects,
       isLoading,
@@ -188,7 +193,8 @@ export default {
       visiblePages,
       handleItemsPerPageChange,
       handleSortChange,
-      goToPage
+      goToPage,
+      handleProjectClick
     }
   }
 }

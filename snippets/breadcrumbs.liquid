@@ -7,12 +7,19 @@
       <meta itemprop="position" content="1" />
     </li>
     {%- assign is_diy_category = false -%}
+    {%- assign is_diy_project = false -%}
     {%- if metaobject and metaobject.type == 'diy_project_category' -%}
       {%- assign is_diy_category = true -%}
     {%- elsif template.name == 'metaobject' and metaobject and metaobject.type == 'diy_project_category' -%}
       {%- assign is_diy_category = true -%}
     {%- elsif request.path contains '/diy-project-category/' -%}
       {%- assign is_diy_category = true -%}
+    {%- elsif metaobject and metaobject.type == 'diy_projects' -%}
+      {%- assign is_diy_project = true -%}
+    {%- elsif template.name == 'metaobject' and metaobject and metaobject.type == 'diy_projects' -%}
+      {%- assign is_diy_project = true -%}
+    {%- elsif request.path contains '/pages/diy-projects/' and request.path != '/pages/diy-projects' -%}
+      {%- assign is_diy_project = true -%}
     {%- endif -%}
     
     {%- if is_diy_category -%}
@@ -52,6 +59,74 @@
           <span itemprop="name">{{ final_category_title | upcase }}</span>
         </span>
         <meta itemprop="position" content="3" />
+      </li>
+    {%- elsif is_diy_project -%}
+      <li class="breadcrumb__item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+        <a href="/pages/diy-projects" title="DIY Projects" itemprop="item" itemscope itemtype="http://schema.org/Thing" itemid="/pages/diy-projects">
+          <span itemprop="name">DIY PROJECTS</span>
+        </a>
+        <meta itemprop="position" content="2" />
+      </li>
+      {%- assign project_category_handle = category_handle | default: '' -%}
+      {%- assign project_category_title = category_title | default: passed_category_title | default: '' -%}
+      {%- if metaobject and metaobject.fields -%}
+        {%- for field in metaobject.fields -%}
+          {%- if field.key == 'category' and field.reference -%}
+            {%- if project_category_handle == blank -%}
+              {%- assign project_category_handle = field.reference.handle -%}
+            {%- endif -%}
+            {%- if project_category_title == blank -%}
+              {%- assign project_category_title = field.reference.display_name -%}
+              {%- if project_category_title == blank -%}
+                {%- for cat_field in field.reference.fields -%}
+                  {%- if cat_field.key == 'title' -%}
+                    {%- assign project_category_title = cat_field.value -%}
+                    {%- break -%}
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endif -%}
+            {%- endif -%}
+            {%- break -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endif -%}
+      {%- if project_category_handle != blank and project_category_title != blank -%}
+        <li class="breadcrumb__item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <a href="/pages/diy-project-category/{{ project_category_handle }}" title="{{ project_category_title }}" itemprop="item" itemscope itemtype="http://schema.org/Thing" itemid="/pages/diy-project-category/{{ project_category_handle }}">
+            <span itemprop="name">{{ project_category_title | upcase }}</span>
+          </a>
+          <meta itemprop="position" content="3" />
+        </li>
+      {%- endif -%}
+      <li class="breadcrumb__item breadcrumb__item--active" aria-current="page" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+        <span itemscope itemtype="http://schema.org/Thing" itemprop="item" itemid="{{ request.path }}">
+          {%- assign project_title = '' -%}
+          {%- if metaobject -%}
+            {%- assign project_title = metaobject.display_name -%}
+            {%- if project_title == blank and metaobject.fields -%}
+              {%- for field in metaobject.fields -%}
+                {%- if field.key == 'title' -%}
+                  {%- assign project_title = field.value -%}
+                  {%- break -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+            {%- if project_title == blank -%}
+              {%- assign project_title = metaobject.handle | replace: '-', ' ' | capitalize -%}
+            {%- endif -%}
+          {%- endif -%}
+          {%- if project_title == blank -%}
+            {%- assign path_parts = request.path | split: '/' -%}
+            {%- if path_parts.size >= 4 and path_parts[2] == 'diy-projects' -%}
+              {%- assign project_title = path_parts[3] | replace: '-', ' ' | capitalize -%}
+            {%- endif -%}
+          {%- endif -%}
+          {%- if project_title == blank -%}
+            {%- assign project_title = 'DIY Project' -%}
+          {%- endif -%}
+          <span itemprop="name">{{ project_title | upcase }}</span>
+        </span>
+        <meta itemprop="position" content="{% if project_category_handle != blank and project_category_title != blank %}4{% else %}3{% endif %}" />
       </li>
     {%- else -%}
     {%- case template.name -%}
@@ -117,7 +192,7 @@
 
       {%- when 'metaobject' -%}
         {%- comment -%} Breadcrumb for metaobject pages {%- endcomment -%}
-        {%- if metaobject.type == 'diy_project_category' -%}
+        {%- if metaobject and metaobject.type == 'diy_project_category' -%}
           <li class="breadcrumb__item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
             <a href="/pages/diy-projects" title="DIY Projects" itemprop="item" itemscope itemtype="http://schema.org/Thing" itemid="/pages/diy-projects">
               <span itemprop="name">DIY PROJECTS</span>
@@ -146,10 +221,133 @@
             </span>
             <meta itemprop="position" content="3" />
           </li>
+        {%- elsif metaobject.type == 'diy_projects' -%}
+          <li class="breadcrumb__item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <a href="/pages/diy-projects" title="DIY Projects" itemprop="item" itemscope itemtype="http://schema.org/Thing" itemid="/pages/diy-projects">
+              <span itemprop="name">DIY PROJECTS</span>
+            </a>
+            <meta itemprop="position" content="2" />
+          </li>
+          {%- assign project_category_handle = category_handle | default: vue_category_handle | default: '' -%}
+          {%- assign project_category_title = category_title | default: vue_category_title | default: passed_category_title | default: '' -%}
+          {%- if project_category_handle == blank or project_category_title == blank -%}
+            {%- for field in metaobject.fields -%}
+              {%- if field.key == 'category' and field.reference -%}
+                {%- if project_category_handle == blank -%}
+                  {%- assign project_category_handle = field.reference.handle -%}
+                {%- endif -%}
+                {%- if project_category_title == blank -%}
+                  {%- assign project_category_title = field.reference.display_name -%}
+                  {%- if project_category_title == blank -%}
+                    {%- for cat_field in field.reference.fields -%}
+                      {%- if cat_field.key == 'title' -%}
+                        {%- assign project_category_title = cat_field.value -%}
+                        {%- break -%}
+                      {%- endif -%}
+                    {%- endfor -%}
+                  {%- endif -%}
+                {%- endif -%}
+                {%- break -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+          {%- if project_category_handle != blank and project_category_title != blank -%}
+            <li class="breadcrumb__item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+              <a href="/pages/diy-project-category/{{ project_category_handle }}" title="{{ project_category_title }}" itemprop="item" itemscope itemtype="http://schema.org/Thing" itemid="/pages/diy-project-category/{{ project_category_handle }}">
+                <span itemprop="name">{{ project_category_title | upcase }}</span>
+              </a>
+              <meta itemprop="position" content="3" />
+            </li>
+          {%- endif -%}
+          <li class="breadcrumb__item breadcrumb__item--active" aria-current="page" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <span itemscope itemtype="http://schema.org/Thing" itemprop="item" itemid="{{ request.path }}">
+              {%- assign project_title = metaobject.display_name -%}
+              {%- if project_title == blank -%}
+                {%- for field in metaobject.fields -%}
+                  {%- if field.key == 'title' -%}
+                    {%- assign project_title = field.value -%}
+                    {%- break -%}
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endif -%}
+              {%- if project_title == blank -%}
+                {%- assign project_title = metaobject.handle | replace: '-', ' ' | capitalize -%}
+              {%- endif -%}
+              <span itemprop="name">{{ project_title | upcase }}</span>
+            </span>
+            <meta itemprop="position" content="{% if project_category_handle != blank %}4{% else %}3{% endif %}" />
+          </li>
+        {%- endif -%}
+
+      {%- when 'page' -%}
+        {%- if request.path == '/pages/ki-skill-levels' -%}
+          <li class="breadcrumb__item breadcrumb__item--active" aria-current="page" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <span itemscope itemtype="http://schema.org/Thing" itemprop="item" itemid="{{ request.path }}">
+              <span itemprop="name">KOCH INSPIRATION (KI) SKILL LEVELS</span>
+            </span>
+            <meta itemprop="position" content="2" />
+          </li>
+        {%- elsif request.path contains '/pages/diy-projects/' and request.path != '/pages/diy-projects' -%}
+          <li class="breadcrumb__item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <a href="/pages/diy-projects" title="DIY Projects" itemprop="item" itemscope itemtype="http://schema.org/Thing" itemid="/pages/diy-projects">
+              <span itemprop="name">DIY PROJECTS</span>
+            </a>
+            <meta itemprop="position" content="2" />
+          </li>
+          {%- assign project_category_handle = category_handle | default: '' -%}
+          {%- assign project_category_title = category_title | default: passed_category_title | default: '' -%}
+          {%- if project_category_handle == blank or project_category_title == blank -%}
+            {%- if metaobject and metaobject.fields -%}
+              {%- for field in metaobject.fields -%}
+                {%- if field.key == 'category' and field.reference -%}
+                  {%- if project_category_handle == blank -%}
+                    {%- assign project_category_handle = field.reference.handle -%}
+                  {%- endif -%}
+                  {%- if project_category_title == blank -%}
+                    {%- assign project_category_title = field.reference.display_name -%}
+                    {%- if project_category_title == blank -%}
+                      {%- for cat_field in field.reference.fields -%}
+                        {%- if cat_field.key == 'title' -%}
+                          {%- assign project_category_title = cat_field.value -%}
+                          {%- break -%}
+                        {%- endif -%}
+                      {%- endfor -%}
+                    {%- endif -%}
+                  {%- endif -%}
+                  {%- break -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+          {%- endif -%}
+          {%- if project_category_handle != blank and project_category_title != blank -%}
+            <li class="breadcrumb__item" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+              <a href="/pages/diy-project-category/{{ project_category_handle }}" title="{{ project_category_title }}" itemprop="item" itemscope itemtype="http://schema.org/Thing" itemid="/pages/diy-project-category/{{ project_category_handle }}">
+                <span itemprop="name">{{ project_category_title | upcase }}</span>
+              </a>
+              <meta itemprop="position" content="3" />
+            </li>
+          {%- endif -%}
+          <li class="breadcrumb__item breadcrumb__item--active" aria-current="page" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <span itemscope itemtype="http://schema.org/Thing" itemprop="item" itemid="{{ request.path }}">
+              {%- assign project_title = page.title | default: '' -%}
+              {%- if project_title == blank -%}
+                {%- assign path_parts = request.path | split: '/' -%}
+                {%- if path_parts.size >= 4 and path_parts[2] == 'diy-projects' -%}
+                  {%- assign project_title = path_parts[3] | replace: '-', ' ' | capitalize -%}
+                {%- endif -%}
+              {%- endif -%}
+              <span itemprop="name">{{ project_title | upcase }}</span>
+            </span>
+            <meta itemprop="position" content="{% if project_category_handle != blank %}4{% else %}3{% endif %}" />
+          </li>
         {%- else -%}
           <li class="breadcrumb__item breadcrumb__item--active" aria-current="page" itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
             <span itemscope itemtype="http://schema.org/Thing" itemprop="item" itemid="{{ request.path }}">
-              <span itemprop="name">{{ metaobject.fields.title.value | default: metaobject.handle | upcase }}</span>
+              {%- if page.title -%}
+                <span itemprop="name">{{ page.title }}</span>
+              {%- else -%}
+                <span itemprop="name">{{ page_title }}</span>
+              {%- endif -%}
             </span>
             <meta itemprop="position" content="2" />
           </li>

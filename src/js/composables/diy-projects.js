@@ -340,7 +340,7 @@ export function useDiyProjects () {
           image_alt: primaryAlt,
           category_handle: fields.category || fields.category_handle || null,
           category_id: fields.category_id || null,
-          url: `/projects-info/${node.handle}`,
+          url: `/pages/diy-projects/${node.handle}`,
           ...fields
         }
       })
@@ -377,7 +377,7 @@ export function useDiyProjects () {
           title: refFields.title || 'Untitled',
           image: refFields.image || refFields.images || null,
           sku: refFields.sku || refFields.product_code || null,
-          url: `/projects-info/${ref.handle}`
+          url: `/metaobjects/diy_projects/${ref.handle}`
         }
       })
 
@@ -401,6 +401,149 @@ export function useDiyProjects () {
     }
   }
 
+  async function fetchProjectByHandle (handle) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const query = `
+        query GetProject($handle: String!) {
+          metaobject(handle: {handle: $handle, type: "diy_projects"}) {
+            id
+            handle
+            type
+            fields {
+              key
+              value
+              type
+              reference {
+                ... on MediaImage {
+                  image {
+                    url
+                    altText
+                    width
+                    height
+                  }
+                }
+                ... on Metaobject {
+                  id
+                  handle
+                  type
+                  fields {
+                    key
+                    value
+                    type
+                    reference {
+                      ... on MediaImage {
+                        image {
+                          url
+                          altText
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `
+
+      const response = await makeGraphQLRequest(query, { handle })
+
+      if (response.data.errors) {
+        throw new Error(response.data.errors[0].message)
+      }
+
+      if (!response.data.data || !response.data.data.metaobject) {
+        throw new Error(`Project not found for handle: ${handle}`)
+      }
+
+      const node = response.data.data.metaobject
+      const fields = {}
+
+      node.fields.forEach(field => {
+        if (field.type === 'file_reference' && field.reference) {
+          fields[field.key] = field.reference.image?.url || null
+          fields[`${field.key}_alt`] = field.reference.image?.altText || ''
+          fields[`${field.key}_width`] = field.reference.image?.width || null
+          fields[`${field.key}_height`] = field.reference.image?.height || null
+        } else if (field.type === 'metaobject_reference' && field.reference) {
+          const refFields = {}
+          if (field.reference.fields) {
+            field.reference.fields.forEach(refField => {
+              if (refField.type === 'file_reference' && refField.reference) {
+                refFields[refField.key] = refField.reference.image?.url || null
+              } else {
+                refFields[refField.key] = refField.value
+              }
+            })
+          }
+          if (field.key === 'category' || field.key === 'Category') {
+            fields[field.key] = {
+              id: field.reference.id,
+              handle: field.reference.handle,
+              type: field.reference.type,
+              title: refFields.title || refFields.Title || '',
+              ...refFields
+            }
+          } else {
+            fields[field.key] = {
+              id: field.reference.id,
+              handle: field.reference.handle,
+              type: field.reference.type,
+              ...refFields
+            }
+          }
+        } else {
+          fields[field.key] = field.value
+        }
+      })
+
+      const primaryImage = fields.image || fields.images || null
+      const primaryAlt = fields.image_alt || fields.images_alt || ''
+
+      const description = fields.description || fields.Description || ''
+
+      const categoryData = fields.category || fields.Category || null
+      let categoryHandle = ''
+      let categoryTitle = ''
+
+      if (categoryData && typeof categoryData === 'object') {
+        categoryHandle = categoryData.handle || ''
+        categoryTitle = categoryData.title || categoryData.Title || ''
+      }
+
+      const productHandleValue = fields.product_handle || fields.productHandle || ''
+
+      const result = {
+        id: node.id,
+        handle: node.handle,
+        type: node.type,
+        title: fields.title || fields.Title || 'Untitled',
+        description,
+        image: primaryImage,
+        image_alt: primaryAlt,
+        sku: fields.sku || fields.Sku || '',
+        skill_level: fields.skill_level || fields['skill level'] || fields['Skill Level'] || '',
+        bundle_id: fields.bundle_id || '',
+        bundle_handle: fields.bundle_handle || '',
+        product_handle: productHandleValue,
+        category: categoryData,
+        category_handle: categoryHandle,
+        category_title: categoryTitle,
+        ...fields
+      }
+
+      return result
+    } catch (err) {
+      error.value = err.message || 'Failed to load project'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   function reset () {
     projects.value = []
     endCursor.value = null
@@ -414,6 +557,7 @@ export function useDiyProjects () {
     hasNextPage,
     fetchProjects,
     fetchProjectsByCategory,
+    fetchProjectByHandle,
     reset
   }
 }
