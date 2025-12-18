@@ -6,26 +6,56 @@
     {%- comment -%}
       .product-image class used for forced aspect ratio settings
     {%- endcomment -%}
-    <div class="product-item__image product-image relative">
+    <div class="product-item__image-wrapper">
+      <div 
+        class="product-item__image product-image relative"
+        @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave">
+        <div class="product-image-container relative overflow-hidden">
+          <template v-if="productImages.length > 0">
+            <div 
+              v-for="(image, index) in productImages" 
+              :key="index"
+              class="product-image-wrapper"
+              :class="{ 'opacity-100': currentImageIndex === index, 'opacity-0': currentImageIndex !== index }">
       <responsive-image
-        v-if="media"
-        :is-lazy-load="isLazyLoad"
-        :src="media.src"
+                :is-lazy-load="isLazyLoad && index === 0"
+                :src="image.src || image.url"
         :base-width="468"
-        :base-height="468 / media.aspect_ratio"
+                :base-height="468 / (image.aspect_ratio || 1)"
         :sizes="imgSizes"
-        :alt="media.alt || product.title"
-        class="w-full"
+                :alt="image.alt || product.title"
+                class="w-full h-full"
       ></responsive-image>
-
-      <template v-else>{{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}</template>
+            </div>
+          </template>
+          <template v-else>
+            {{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}
+          </template>
+        </div>
       <span v-if="isSale" class="product-badge product-badge--sale">{{ 'products.product.on_sale' | t }}</span>
+      </div>
+      <div 
+        v-if="productImages.length > 1" 
+        class="product-image-dots">
+        <button
+          v-for="(image, index) in productImages"
+          :key="index"
+          type="button"
+          class="product-image-dot"
+          :class="{ 'bg-white': currentImageIndex === index }"
+          @mouseenter="handleDotHover(index)"
+          @mouseleave="handleDotLeave"
+          :aria-label="'Image ' + (index + 1)"
+        ></button>
+      </div>
     </div>
 
-    <h3 class="h5" v-html="product.title"></h3>
-
+    <h3 class="h5 text-center" v-html="product.title"></h3>
+    <div class="text-center">
     <span class="price" :class="{ 'price--sale': isSale }">${ product.price | currencyFromCents }</span>
     <s v-if="isSale" class="price price--old">${ product.compare_at_price | currencyFromCents }</s>
+    </div>
   </a>
 
   <form @submit.prevent="handleAddToCart" class="hidden lg:block mt-3">
@@ -57,7 +87,7 @@
     </template>
     <button-spinner
       :is-loading="isAddingToCart"
-      class="button button--primary w-full"
+      class="button button--primary w-full uppercase font-bold"
       :disabled="!currentVariant || !currentVariant.available">
       <span v-if="!currentVariant || currentVariant.available">{{ 'products.product.add_to_cart' | t }}</span>
       <span v-else>{{ 'products.product.sold_out' | t }}</span>

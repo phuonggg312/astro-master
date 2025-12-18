@@ -30,6 +30,16 @@ export default {
       default: true
     },
 
+    customQuantity: {
+      type: Number,
+      default: null
+    },
+
+    onAddToCart: {
+      type: Function,
+      default: null
+    },
+
     /**
      * Passed to the responsive image component.
      * Learn how sizes work - https://www.dofactory.com/html/img/sizes
@@ -88,13 +98,53 @@ export default {
 
   data () {
     return {
-      media: null
+      media: null,
+      currentImageIndex: 0,
+      isHovered: false
     }
   },
 
   computed: {
     productUrl () {
       return `${this.baseUrl}${this.product.handle}`
+    },
+    productImages () {
+      const images = []
+
+      if (this.product.media && this.product.media.length > 0) {
+        this.product.media.forEach(media => {
+          if (media.media_type === 'image' || !media.media_type) {
+            images.push({
+              src: media.src || media.url,
+              alt: media.alt || this.product.title,
+              aspect_ratio: media.aspect_ratio || 1
+            })
+          }
+        })
+      }
+
+      if (images.length === 0 && this.product.images && this.product.images.length > 0) {
+        this.product.images.forEach(img => {
+          images.push({
+            src: typeof img === 'string' ? img : (img.url || img.src),
+            alt: img.alt || this.product.title,
+            aspect_ratio: img.aspect_ratio || 1
+          })
+        })
+      }
+
+      if (images.length === 0 && this.featuredMedia) {
+        images.push({
+          src: this.featuredMedia.src || this.featuredMedia.url,
+          alt: this.featuredMedia.alt || this.product.title,
+          aspect_ratio: this.featuredMedia.aspect_ratio || 1
+        })
+      }
+
+      return images
+    },
+    finalQuantity () {
+      return this.customQuantity !== null ? this.customQuantity : this.quantity
     }
   },
 
@@ -103,13 +153,35 @@ export default {
       this.currentVariant = this.product.variants[0]
     }
 
-    this.media = this.featuredMedia || this.product.media?.[0]
+    this.media = this.featuredMedia || this.product.media?.[0] || this.productImages[0]
   },
 
   methods: {
     async handleAddToCart () {
-      const { success } = await this.addToCart(this.currentVariant.id, this.quantity)
-      if (success) this.toggleFlyout('minicart')
+      if (this.onAddToCart) {
+        this.onAddToCart(this.product.id, this.finalQuantity)
+      } else {
+        const { success } = await this.addToCart(this.currentVariant.id, this.finalQuantity)
+        if (success) this.toggleFlyout('minicart')
+      }
+    },
+    handleMouseEnter () {
+      this.isHovered = true
+      if (this.productImages.length > 1 && this.currentImageIndex === 0) {
+        this.currentImageIndex = 1
+      }
+    },
+    handleMouseLeave () {
+      this.isHovered = false
+      this.currentImageIndex = 0
+    },
+    handleDotHover (index) {
+      this.currentImageIndex = index
+    },
+    handleDotLeave () {
+      if (!this.isHovered) {
+        this.currentImageIndex = 0
+      }
     }
   }
 }

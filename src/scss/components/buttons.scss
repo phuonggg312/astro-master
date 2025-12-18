@@ -5,7 +5,9 @@
 
   &:focus,
   &:hover {
-    @apply bg-primary text-white;
+    @apply bg-white;
+    border-color: #4f8fbf;
+    color: #4f8fbf;
   }
 
   &--dark {
@@ -18,11 +20,15 @@
   }
 
   &--primary {
-    @apply bg-primary text-white;
+    @apply  text-white;
+    border-color: #4f8fbf;
+    background-color: #4f8fbf;
+    font-weight: bold;
 
     &:focus,
     &:hover {
       @apply bg-white text-primary;
+      color:#4f8fbf;
     }
 
     &#{ $self }--dark {

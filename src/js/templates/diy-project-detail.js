@@ -1,6 +1,7 @@
 import { ref, onMounted, watch, nextTick } from 'vue'
 import ResponsiveImage from '@/js/components/responsive-image.vue'
 import ProductItem from '@/js/components/product-item.js'
+import QuantityField from '@/js/components/quantity-field.vue'
 import { useCart } from '@/js/composables/cart'
 import { useFlyouts } from '@/js/composables/flyouts'
 import { useDiyProjects } from '@/js/composables/diy-projects'
@@ -8,7 +9,8 @@ import { useDiyProjects } from '@/js/composables/diy-projects'
 export default {
   components: {
     ResponsiveImage,
-    ProductItem
+    ProductItem,
+    QuantityField
   },
 
   props: {
@@ -42,6 +44,9 @@ export default {
     const skillLevel = ref('')
     const supplies = ref([])
     const product = ref(null)
+    const bundledProducts = ref([])
+    const productQuantities = ref({})
+    const pendingCartItems = ref({})
     const isLoading = ref(false)
     const error = ref(null)
     const categoryHandle = ref(props.categoryHandle || '')
@@ -92,7 +97,6 @@ export default {
 
         if (project.product_handle) {
           productHandle.value = project.product_handle
-          console.log('Product handle extracted from GraphQL:', project.product_handle)
           await loadProduct()
         }
       } catch (err) {
@@ -163,7 +167,6 @@ export default {
       }
 
       if (productHandle.value) {
-        console.log('Product handle found in extractFieldsFromMetaobject:', productHandle.value)
         loadProduct()
       }
     }
@@ -232,53 +235,220 @@ export default {
     }
 
     async function loadProduct () {
-      const handle = productHandle.value || props.productHandle
-      console.log('loadProduct called with handle:', handle, 'from props:', props.productHandle, 'from ref:', productHandle.value)
+      let handle = productHandle.value || props.productHandle
 
       if (!handle) {
-        console.log('No product handle provided')
         return
       }
 
-      try {
-        const url = `/products/${handle}.js`
-        console.log('Fetching product from:', url)
-        const response = await fetch(url)
+      handle = handle.toLowerCase()
 
-        if (!response.ok) {
-          console.error('Failed to load product:', response.status, response.statusText)
+      const query = `
+        query GetBundleComponents($handle: String!) {
+          product(handle: $handle) {
+            id
+            title
+            handle
+            featuredImage {
+              url
+              altText
+            }
+            variants(first: 1) {
+              nodes {
+                id
+                price {
+                  amount
+                  currencyCode
+                }
+                components(first: 20) {
+                  edges {
+                    node {
+                      quantity
+                      productVariant {
+                        id
+                        title
+                        availableForSale
+                        price {
+                          amount
+                          currencyCode
+                        }
+                        product {
+                          title
+                          handle
+                          featuredImage {
+                            url
+                            altText
+                          }
+                          images(first: 5) {
+                            edges {
+                              node {
+                                url
+                                altText
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `
+
+      try {
+        const shopDomain = window.Shopify?.shop
+        if (!shopDomain) {
           return
         }
 
-        const productData = await response.json()
-        console.log('Product data received:', productData)
-
-        if (productData.featured_image) {
-          productData.featured_media = {
-            src: productData.featured_image,
-            alt: productData.title || '',
-            aspect_ratio: 1
-          }
-        } else if (productData.images && productData.images.length > 0) {
-          productData.featured_media = {
-            src: productData.images[0],
-            alt: productData.title || '',
-            aspect_ratio: 1
+        let token = window.Shopify?.storefrontAccessToken
+        if (!token) {
+          try {
+            const { storefrontRequestConfig } = await import('@/js/utils/api')
+            token = storefrontRequestConfig?.headers?.['X-Shopify-Storefront-Access-Token']
+          } catch (e) {
+            return
           }
         }
 
-        product.value = productData
-        console.log('Product set to reactive ref:', product.value)
+        const graphqlUrl = `https://${shopDomain}/api/2024-01/graphql.json`
+
+        const response = await fetch(graphqlUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Shopify-Storefront-Access-Token': token
+          },
+          body: JSON.stringify({
+            query,
+            variables: { handle }
+          })
+        })
+
+        if (!response.ok) {
+          return
+        }
+
+        const result = await response.json()
+
+        if (result.errors) {
+          return
+        }
+
+        const productData = result.data?.product
+        if (!productData) {
+          return
+        }
+
+        if (productData.featuredImage) {
+          product.value = {
+            id: productData.id,
+            title: productData.title,
+            handle: productData.handle,
+            featured_media: {
+              src: productData.featuredImage.url,
+              alt: productData.featuredImage.altText || productData.title,
+              aspect_ratio: 1
+            }
+          }
+        } else {
+          product.value = {
+            id: productData.id,
+            title: productData.title,
+            handle: productData.handle
+          }
+        }
+
+        const variant = productData.variants?.nodes?.[0]
+
+        if (!variant) {
+          return
+        }
+
+        const componentsEdge = variant.components?.edges || []
+
+        if (componentsEdge.length > 0) {
+          const bundledProductsList = componentsEdge.map(edge => {
+            const comp = edge.node
+            const item = comp.productVariant
+
+            if (!item || !item.product) {
+              return null
+            }
+
+            const priceInCents = parseFloat(item.price.amount) * 100
+            const variantTitle = item.title === 'Default Title' ? 'Default Title' : item.title
+
+            const variant = {
+              id: item.id,
+              title: variantTitle,
+              price: priceInCents,
+              compare_at_price: null,
+              available: item.availableForSale,
+              option1: variantTitle !== 'Default Title' ? variantTitle : null,
+              option2: null,
+              option3: null,
+              options: variantTitle !== 'Default Title' ? [variantTitle] : []
+            }
+
+            const productImages = []
+            if (item.product.images && item.product.images.edges && item.product.images.edges.length > 0) {
+              item.product.images.edges.forEach(edge => {
+                productImages.push({
+                  src: edge.node.url,
+                  alt: edge.node.altText || item.product.title,
+                  aspect_ratio: 1
+                })
+              })
+            } else if (item.product.featuredImage) {
+              productImages.push({
+                src: item.product.featuredImage.url,
+                alt: item.product.featuredImage.altText || item.product.title,
+                aspect_ratio: 1
+              })
+            }
+
+            return {
+              id: item.product.id || item.id,
+              title: item.product.title,
+              handle: item.product.handle,
+              price: priceInCents,
+              compare_at_price: null,
+              variants: [variant],
+              options: variantTitle !== 'Default Title'
+                ? ['Title']
+                : [],
+              media: productImages,
+              images: productImages.map(img => img.src),
+              featured_media: productImages[0] || null,
+              bundle_quantity: comp.quantity,
+              available: item.availableForSale
+            }
+          }).filter(p => p !== null)
+
+          bundledProducts.value = bundledProductsList
+          bundledProductsList.forEach(product => {
+            productQuantities.value[product.id] = product.bundle_quantity || 1
+            pendingCartItems.value[product.id] = 0
+          })
+        } else {
+          bundledProducts.value = []
+        }
       } catch (error) {
-        console.error('Error loading product:', error)
       }
     }
 
     async function addProductToCart () {
-      if (!props.productHandle) return
+      if (!props.productHandle && !product.value) return
 
       try {
-        const response = await fetch(`/products/${props.productHandle}.js`)
+        const handle = props.productHandle || product.value?.handle
+        if (!handle) return
+
+        const response = await fetch(`/products/${handle}.js`)
         if (!response.ok) return
 
         const productData = await response.json()
@@ -291,7 +461,51 @@ export default {
           toggleFlyout('minicart')
         }
       } catch (error) {
-        console.error('Error adding product to cart:', error)
+      }
+    }
+
+    function updateProductQuantity (productId, quantity) {
+      const qty = parseInt(quantity) || 1
+      if (qty < 1) {
+        productQuantities.value[productId] = 1
+      } else {
+        productQuantities.value[productId] = qty
+      }
+    }
+
+    function addProductToPendingCart (productId, quantity) {
+      if (!pendingCartItems.value[productId]) {
+        pendingCartItems.value[productId] = 0
+      }
+      pendingCartItems.value[productId] += parseInt(quantity) || 1
+    }
+
+    async function addAllBundledProductsToCart () {
+      if (!bundledProducts.value || bundledProducts.value.length === 0) return
+
+      try {
+        const addPromises = bundledProducts.value.map(async (bundledProduct) => {
+          const pendingQty = pendingCartItems.value[bundledProduct.id] || 0
+          if (pendingQty <= 0) {
+            return null
+          }
+
+          const variantId = bundledProduct.id
+          if (!variantId) {
+            return null
+          }
+
+          return await addToCart(variantId, pendingQty)
+        })
+
+        const results = await Promise.all(addPromises)
+        const success = results.some(r => r && r.success)
+
+        if (success) {
+          pendingCartItems.value = {}
+          toggleFlyout('minicart')
+        }
+      } catch (error) {
       }
     }
 
@@ -311,24 +525,11 @@ export default {
         updateBreadcrumb()
       }, 300)
 
-      console.log('DIY Project Detail - Props:', {
-        productHandle: props.productHandle,
-        productHandleRef: productHandle.value,
-        metaobject: props.metaobject
-      })
-
       if (productHandle.value || props.productHandle) {
-        console.log('Loading product with handle:', productHandle.value || props.productHandle)
         await loadProduct()
-      } else {
-        console.log('No productHandle found, checking metaobject directly...')
-        if (props.metaobject && props.metaobject.product_handle) {
-          productHandle.value = props.metaobject.product_handle
-          console.log('Product handle found in metaobject:', productHandle.value)
-          await loadProduct()
-        } else {
-          console.log('No productHandle found anywhere')
-        }
+      } else if (props.metaobject && props.metaobject.product_handle) {
+        productHandle.value = props.metaobject.product_handle
+        await loadProduct()
       }
     })
 
@@ -340,6 +541,9 @@ export default {
       skillLevel,
       supplies,
       product,
+      bundledProducts,
+      productQuantities,
+      pendingCartItems,
       productHandle,
       isLoading,
       error,
@@ -349,6 +553,9 @@ export default {
       scrollToSupplies,
       printProject,
       addProductToCart,
+      addAllBundledProductsToCart,
+      addProductToPendingCart,
+      updateProductQuantity,
       updateBreadcrumb
     }
   }

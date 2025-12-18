@@ -34,7 +34,7 @@ module.exports = {
         border: '#333333',
         error: '#dc3545',
         success: '#198754',
-        info: '#0d6efd'
+        info: '#0dcaf0',
       },
       fontFamily: {
         display: 'Assistant, sans-serif',

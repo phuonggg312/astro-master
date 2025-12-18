@@ -69,8 +69,13 @@ export default {
   },
 
   watch: {
-    value (value) {
-      this.quantity = value
+    value: {
+      handler (newValue) {
+        if (newValue !== this.quantity) {
+          this.quantity = newValue
+        }
+      },
+      immediate: true
     }
   },
 
@@ -79,11 +84,10 @@ export default {
       let newQuantity = value !== undefined ? value : this.quantity
       if (newQuantity < 1 && !this.isZeroAllowed) {
         newQuantity = 1
-        this.quantity = newQuantity
       } else if (newQuantity < 0) {
         newQuantity = 0
-        this.quantity = newQuantity
       }
+      this.quantity = newQuantity
       this.$emit('update-quantity', newQuantity)
     },
 

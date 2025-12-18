@@ -154,19 +154,61 @@
           </div>
           
           <section class="supplies-section" id="supplies">
-          <div class="supplies-header flex items-center justify-between mb-6">
+          <div class="supplies-header mb-6">
             <h2 class="h3">Supplies</h2>
+            <div class="mt-4">
+              <button 
+                v-if="bundledProducts && bundledProducts.length > 0"
+                @click="addAllBundledProductsToCart"
+                class="button button--primary">
+                ADD ALL MATERIALS TO CART
+              </button>
+              <button 
+                v-else-if="productHandle || product"
+                @click="addProductToCart"
+                class="button button--primary">
+                ADD ALL MATERIALS TO CART
+              </button>
+            </div>
+          </div>
+          
+          <div v-if="bundledProducts && bundledProducts.length > 0" class="bundled-products-container">
+            <div class="supplies-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div v-for="bundledProduct in bundledProducts" :key="bundledProduct.id || bundledProduct.handle" class="bundled-product-item">
+                <div class="relative">
+                  <product-item
+                    inline-template
+                    :product="bundledProduct"
+                    :featured-media="bundledProduct.featured_media"
+                    :url="'/products/' + bundledProduct.handle"
+                    :custom-quantity="productQuantities[bundledProduct.id] || bundledProduct.bundle_quantity || 1"
+                    :on-add-to-cart="(productId, qty) => addProductToPendingCart(productId, qty)"
+                    img-sizes="(max-width: 767px) 50vw, (max-width: 1440px) 25vw, calc(1440px / 4)">
+                    {% render 'product-item' %}
+                  </product-item>
+                  <div v-if="pendingCartItems && pendingCartItems[bundledProduct.id] && pendingCartItems[bundledProduct.id] > 0" class="pending-cart-badge">
+                    x {{ pendingCartItems[bundledProduct.id] }} in cart
+                  </div>
+                </div>
+                <div class="bundle-product-actions mt-3">
+                  <quantity-field
+                    :value="productQuantities[bundledProduct.id] || bundledProduct.bundle_quantity || 1"
+                    @update-quantity="updateProductQuantity(bundledProduct.id, $event)"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="bundledProducts && bundledProducts.length > 0" class="supplies-footer mt-6">
             <button 
-              v-if="productHandle || product"
-              @click="addProductToCart"
-              :disabled="isAddingToCart"
+              @click="addAllBundledProductsToCart"
               class="button button--primary">
-              <span v-if="isAddingToCart">Adding...</span>
-              <span v-else>ADD ALL MATERIALS TO CART</span>
+              ADD ALL MATERIALS TO CART
             </button>
           </div>
           
-          <div v-if="productHandle || product" class="product-container">
+          <div v-else-if="productHandle || product" class="product-container">
             <div v-if="product" class="supplies-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <product-item
                 inline-template
@@ -182,9 +224,16 @@
             </div>
           </div>
           
-          <div v-else-if="supplies && supplies.length > 0" class="supplies-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div v-for="product in supplies" :key="product.id" class="supply-item">
-            </div>
+          <div v-if="productHandle || product" v-show="!bundledProducts || bundledProducts.length === 0" class="supplies-footer mt-6">
+            <button 
+              @click="addProductToCart"
+              class="button button--primary">
+              ADD ALL MATERIALS TO CART
+            </button>
+          </div>
+          
+          <div v-else class="text-center py-8">
+            <p class="text-gray-600">No supplies available for this project.</p>
           </div>
         </section>
         </template>
@@ -248,6 +297,110 @@
     margin-top: 4rem;
     padding-top: 2rem;
     border-top: 1px solid #e5e7eb;
+  }
+
+  .bundled-product-item {
+    position: relative;
+  }
+
+  .bundle-quantity-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: #4f8fbf;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 10;
+  }
+
+  .product-item__image-wrapper {
+    position: relative;
+  }
+
+  .product-item__image {
+    position: relative;
+  }
+
+  .product-image-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+  }
+
+  .product-image-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  .product-image-wrapper.opacity-0 {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .product-image-wrapper.opacity-100 {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .product-image-wrapper img,
+  .product-image-wrapper responsive-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .product-image-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 0;
+  }
+
+  .product-image-dot {
+    cursor: pointer;
+    border: none;
+    padding: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: opacity 0.2s, transform 0.2s, background-color 0.2s;
+    background-color: #d1d5db;
+    border: 1px solid #9ca3af;
+  }
+
+  .product-image-dot.bg-white {
+    background-color: #6b7280;
+    border-color: #6b7280;
+    opacity: 1;
+  }
+
+  .product-image-dot:hover {
+    background-color: #6b7280;
+    border-color: #6b7280;
+    transform: scale(1.2);
+  }
+
+  .pending-cart-badge {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background-color: #10b981;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 20;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
   
   .diy-project-detail .rte {
