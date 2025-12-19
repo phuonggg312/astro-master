@@ -51,12 +51,32 @@
       </div>
     </div>
 
+    <div v-if="productSku" class="text-center mb-2">
+      <span class="text-sm text-black font-medium">
+        ${ productSku }
+      </span>
+    </div>
     <h3 class="h5 text-center" v-html="product.title"></h3>
     <div class="text-center">
     <span class="price" :class="{ 'price--sale': isSale }">${ product.price | currencyFromCents }</span>
     <s v-if="isSale" class="price price--old">${ product.compare_at_price | currencyFromCents }</s>
     </div>
   </a>
+
+  <div v-if="showQuantitySelector || showStockStatus" class="bundle-product-actions-wrapper mt-3 flex items-center gap-3">
+    <div v-if="showQuantitySelector" class="bundle-product-actions">
+      <quantity-field
+        :value="quantityValue || customQuantity || quantity"
+        @update-quantity="onQuantityUpdate || (value => quantity = value)"
+      />
+    </div>
+    <div v-if="showStockStatus" class="stock-status flex items-center gap-2">
+      <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+      </svg>
+      <span class="text-sm text-gray-700">In Stock <span class="text-gray-500">(Online)</span></span>
+    </div>
+  </div>
 
   <form @submit.prevent="handleAddToCart" class="hidden lg:block mt-3">
     <input
@@ -82,8 +102,6 @@
             v-html="value"></option>
         </select>
       </div>
-    </template>
-    <template v-else>
     </template>
     <button-spinner
       :is-loading="isAddingToCart"

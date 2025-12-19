@@ -7,8 +7,13 @@
 import { useProduct } from '@/js/composables/product'
 import { useCart } from '@/js/composables/cart'
 import { useFlyouts } from '@/js/composables/flyouts'
+import QuantityField from '@/js/components/quantity-field.vue'
 
 export default {
+  components: {
+    QuantityField
+  },
+
   props: {
     product: {
       type: Object,
@@ -38,6 +43,26 @@ export default {
     onAddToCart: {
       type: Function,
       default: null
+    },
+
+    showQuantitySelector: {
+      type: Boolean,
+      default: false
+    },
+
+    quantityValue: {
+      type: Number,
+      default: null
+    },
+
+    onQuantityUpdate: {
+      type: Function,
+      default: null
+    },
+
+    showStockStatus: {
+      type: Boolean,
+      default: false
     },
 
     /**
@@ -145,6 +170,15 @@ export default {
     },
     finalQuantity () {
       return this.customQuantity !== null ? this.customQuantity : this.quantity
+    },
+    productSku () {
+      if (this.currentVariant && this.currentVariant.sku) {
+        return this.currentVariant.sku
+      }
+      if (this.product.variants && this.product.variants.length > 0 && this.product.variants[0].sku) {
+        return this.product.variants[0].sku
+      }
+      return null
     }
   },
 

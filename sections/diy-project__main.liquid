@@ -175,7 +175,7 @@
           <div v-if="bundledProducts && bundledProducts.length > 0" class="bundled-products-container">
             <div class="supplies-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div v-for="bundledProduct in bundledProducts" :key="bundledProduct.id || bundledProduct.handle" class="bundled-product-item">
-                <div class="relative">
+                <div class="bundled-product-wrapper relative">
                   <product-item
                     inline-template
                     :product="bundledProduct"
@@ -183,18 +183,16 @@
                     :url="'/products/' + bundledProduct.handle"
                     :custom-quantity="productQuantities[bundledProduct.id] || bundledProduct.bundle_quantity || 1"
                     :on-add-to-cart="(productId, qty) => addProductToPendingCart(productId, qty)"
+                    :show-quantity-selector="true"
+                    :quantity-value="productQuantities[bundledProduct.id] || bundledProduct.bundle_quantity || 1"
+                    :on-quantity-update="(qty) => updateProductQuantity(bundledProduct.id, qty)"
+                    :show-stock-status="true"
                     img-sizes="(max-width: 767px) 50vw, (max-width: 1440px) 25vw, calc(1440px / 4)">
                     {% render 'product-item' %}
                   </product-item>
                   <div v-if="pendingCartItems && pendingCartItems[bundledProduct.id] && pendingCartItems[bundledProduct.id] > 0" class="pending-cart-badge">
-                    x {{ pendingCartItems[bundledProduct.id] }} in cart
+                    x ${ pendingCartItems[bundledProduct.id] } in cart
                   </div>
-                </div>
-                <div class="bundle-product-actions mt-3">
-                  <quantity-field
-                    :value="productQuantities[bundledProduct.id] || bundledProduct.bundle_quantity || 1"
-                    @update-quantity="updateProductQuantity(bundledProduct.id, $event)"
-                  />
                 </div>
               </div>
             </div>
@@ -203,8 +201,11 @@
           <div v-if="bundledProducts && bundledProducts.length > 0" class="supplies-footer mt-6">
             <button 
               @click="addAllBundledProductsToCart"
-              class="button button--primary">
-              ADD ALL MATERIALS TO CART
+              :disabled="isAddingAll"
+              class="button button--primary"
+              :class="{ 'opacity-50 cursor-not-allowed': isAddingAll }">
+              <span v-if="isAddingAll">Adding...</span>
+              <span v-else>ADD ALL MATERIALS TO CART</span>
             </button>
           </div>
           
@@ -399,8 +400,124 @@
     border-radius: 4px;
     font-size: 14px;
     font-weight: 600;
-    z-index: 20;
+    z-index: 30;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+  }
+
+  .bundled-product-wrapper {
+    position: relative;
+  }
+
+  .bundled-product-wrapper .product-item__image-wrapper {
+    position: relative;
+  }
+
+  .bundled-product-item .product-item .bundle-product-actions-wrapper {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    pointer-events: none;
+    width: 100%;
+  }
+
+  .bundled-product-item:hover .product-item .bundle-product-actions-wrapper,
+  .bundled-product-item .product-item:hover .bundle-product-actions-wrapper,
+  .bundled-product-wrapper:hover .product-item .bundle-product-actions-wrapper,
+  .bundled-product-item:hover .bundle-product-actions-wrapper {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .bundled-product-item .product-item .bundle-product-actions {
+    opacity: 1;
+    visibility: visible;
+    flex-shrink: 0;
+  }
+
+  .bundled-product-item .product-item .stock-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: #f3f4f6;
+    padding: 8px 12px;
+    border-radius: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .bundled-product-item .stock-status svg {
+    width: 20px;
+    height: 20px;
+    color: #10b981;
+    flex-shrink: 0;
+  }
+
+  .bundled-product-item .stock-status span {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #374151;
+  }
+
+  .bundled-product-item .stock-status span span {
+    color: #6b7280;
+  }
+
+  .bundled-product-item .quantity {
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+  }
+
+  .bundled-product-item .quantity__button {
+    background-color: #f3f4f6;
+    color: #000;
+  }
+
+  .bundled-product-item .quantity__input {
+    background-color: #ffffff;
+  }
+
+  .bundled-product-item .product-item form.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .bundled-product-item:hover .product-item form.hidden {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .bundled-product-wrapper .pending-cart-badge {
+    position: absolute;
+    bottom: calc(100% - 100% * (468 / (468 + 60 + 60)) + 120px);
+    left: 12px;
+    background-color: #10b981;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 30;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+  }
+
+  @media (max-width: 1440px) {
+    .bundled-product-wrapper .pending-cart-badge {
+      bottom: calc(100% - 25vw + 60px);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .bundled-product-wrapper .pending-cart-badge {
+      bottom: calc(100% - 50vw + 60px);
+    }
   }
   
   .diy-project-detail .rte {
@@ -410,25 +527,57 @@
   .diy-project-detail .rte p:not(:last-child) {
     margin-bottom: 1rem;
   }
+
+  @media print {
+    .diy-project-detail .supplies-section {
+      display: block;
+      page-break-inside: avoid;
+      margin-top: 2rem;
+    }
+
+    .diy-project-detail .supplies-section .supplies-header {
+      page-break-after: avoid;
+    }
+
+    .diy-project-detail .supplies-section .supplies-header button {
+      display: none;
+    }
+
+    .diy-project-detail .supplies-section .bundle-product-actions-wrapper {
+      display: none;
+    }
+
+    .diy-project-detail .supplies-section .pending-cart-badge {
+      display: none;
+    }
+
+    .diy-project-detail .supplies-section .product-item form {
+      display: none;
+    }
+
+    .diy-project-detail .supplies-footer {
+      display: none;
+    }
+  }
   
   .diy-project-detail .diy-project-btn {
-    background-color: #4f8fbf !important;
-    color: white !important;
-    font-weight: bold !important;
-    border: 1px solid #4f8fbf !important;
+    background-color: #4f8fbf;
+    color: white;
+    font-weight: bold;
+    border: 1px solid #4f8fbf;
     position: relative;
   }
   
   .diy-project-detail .diy-project-btn:hover {
-    background-color: white !important;
-    color: #4f8fbf !important;
-    border-color: #4f8fbf !important;
+    background-color: white;
+    color: #4f8fbf;
+    border-color: #4f8fbf;
   }
   
   .diy-project-detail .diy-project-btn:hover svg,
   .diy-project-detail .diy-project-btn:hover .icon {
-    color: #4f8fbf !important;
-    fill: #4f8fbf !important;
+    color: #4f8fbf;
+    fill: #4f8fbf;
   }
   
   .diy-project-detail .diy-social-sharing {
@@ -514,12 +663,112 @@
     .announcement-bar,
     .diy-project-detail .diy-project-btn,
     .diy-project-detail .diy-social-sharing,
-    .diy-project-detail .supplies-section,
     time,
     [datetime],
     .date,
     .timestamp {
-      display: none !important;
+      display: none;
+    }
+
+    .diy-project-detail .supplies-section {
+      display: block;
+      page-break-inside: avoid;
+      margin-top: 1rem;
+    }
+
+    .diy-project-detail .supplies-section .supplies-header {
+      page-break-after: avoid;
+      margin-bottom: 0.5rem;
+    }
+
+    .diy-project-detail .supplies-section .supplies-header h2 {
+      font-size: 1.25rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .diy-project-detail .supplies-section .supplies-header button {
+      display: none;
+    }
+
+    .diy-project-detail .supplies-section .supplies-grid {
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      gap: 0.5rem;
+      overflow-x: visible;
+      grid-template-columns: none !important;
+    }
+
+    .diy-project-detail .supplies-section .bundled-product-item {
+      flex: 0 0 auto;
+      width: 140px;
+      min-width: 140px;
+      max-width: 140px;
+    }
+
+    .diy-project-detail .supplies-section .product-item {
+      width: 140px;
+      min-width: 140px;
+      max-width: 140px;
+    }
+
+    .diy-project-detail .supplies-section .product-item__image-wrapper {
+      margin-bottom: 0.25rem;
+      width: 100%;
+    }
+
+    .diy-project-detail .supplies-section .product-item__image-wrapper img {
+      max-height: 100px;
+      max-width: 100%;
+      object-fit: contain;
+    }
+
+    .diy-project-detail .supplies-section .product-item h3 {
+      font-size: 0.65rem;
+      margin-bottom: 0.125rem;
+      line-height: 1.1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      max-height: 2.2em;
+    }
+
+    .diy-project-detail .supplies-section .product-item .price {
+      font-size: 0.65rem;
+      margin-bottom: 0.125rem;
+      white-space: nowrap;
+    }
+
+    .diy-project-detail .supplies-section .bundle-product-actions-wrapper {
+      display: none;
+    }
+
+    .diy-project-detail .supplies-section .pending-cart-badge {
+      display: inline-block;
+      position: relative;
+      bottom: auto;
+      left: auto;
+      background-color: #10b981;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      margin-top: 0.25rem;
+    }
+
+    .diy-project-detail .supplies-section .product-item form {
+      display: none;
+    }
+
+    .diy-project-detail .supplies-section .product-image-dots {
+      display: none;
+    }
+
+    .diy-project-detail .supplies-footer {
+      display: none;
     }
     
     .diy-project-detail {

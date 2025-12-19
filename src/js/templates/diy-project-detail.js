@@ -3,7 +3,6 @@ import ResponsiveImage from '@/js/components/responsive-image.vue'
 import ProductItem from '@/js/components/product-item.js'
 import QuantityField from '@/js/components/quantity-field.vue'
 import { useCart } from '@/js/composables/cart'
-import { useFlyouts } from '@/js/composables/flyouts'
 import { useDiyProjects } from '@/js/composables/diy-projects'
 
 export default {
@@ -48,18 +47,17 @@ export default {
     const productQuantities = ref({})
     const pendingCartItems = ref({})
     const isLoading = ref(false)
+    const isAddingAll = ref(false)
     const error = ref(null)
     const categoryHandle = ref(props.categoryHandle || '')
     const categoryTitle = ref(props.categoryTitle || '')
 
     const {
+      cart,
       isAddingToCart,
-      addToCart
+      addToCart,
+      fetchCart
     } = useCart()
-
-    const {
-      toggleFlyout
-    } = useFlyouts()
 
     const {
       fetchProjectByHandle
@@ -70,6 +68,149 @@ export default {
         props.metaobject?.handle ||
         window.location.pathname.match(/\/(?:pages\/diy-projects|metaobjects\/diy_projects)\/([^/?]+)/)?.[1] ||
         null
+    }
+
+    function getStorageKey () {
+      const projectHandle = getProjectHandle()
+      return projectHandle ? `diy_project_quantities_${projectHandle}` : 'diy_project_quantities'
+    }
+
+    async function syncPendingCartItemsWithActualCart () {
+      if (!cart.value || !cart.value.items || !bundledProducts.value || bundledProducts.value.length === 0) {
+        return
+      }
+
+      const updatedPendingCartItems = { ...pendingCartItems.value }
+
+      bundledProducts.value.forEach(product => {
+        const matchingCartItems = cart.value.items.filter(item => {
+          let itemVariantId = item.id?.toString()
+
+          if (!itemVariantId && item.url) {
+            const variantMatch = item.url.match(/[?&]variant=(\d+)/)
+            if (variantMatch) {
+              itemVariantId = variantMatch[1]
+            }
+          }
+
+          let itemVariantIdGid = null
+          if (itemVariantId && !itemVariantId.startsWith('gid://')) {
+            itemVariantIdGid = `gid://shopify/ProductVariant/${itemVariantId}`
+          } else {
+            itemVariantIdGid = itemVariantId
+          }
+
+          const productVariantId = product.variantId?.toString() || product.id?.toString()
+
+          const matchByVariantId = itemVariantIdGid === productVariantId || itemVariantId === productVariantId
+
+          let matchByUrl = false
+          if (item.url) {
+            const urlVariantMatch = item.url.match(/[?&]variant=(\d+)/)
+            if (urlVariantMatch) {
+              const urlVariantId = `gid://shopify/ProductVariant/${urlVariantMatch[1]}`
+              if (urlVariantId === productVariantId) {
+                matchByUrl = true
+              }
+            }
+
+            if (product.handle && item.url.includes(`/products/${product.handle}`)) {
+              matchByUrl = true
+            }
+          }
+
+          return matchByVariantId || matchByUrl
+        })
+
+        if (matchingCartItems.length > 0) {
+          const totalCartQuantity = matchingCartItems.reduce((sum, item) => {
+            return sum + (item.quantity || 0)
+          }, 0)
+
+          updatedPendingCartItems[product.id] = totalCartQuantity
+        } else {
+          updatedPendingCartItems[product.id] = 0
+        }
+      })
+
+      pendingCartItems.value = updatedPendingCartItems
+      saveQuantitiesToStorage()
+    }
+
+    function loadQuantitiesFromStorage () {
+      try {
+        const storageKey = getStorageKey()
+        const saved = localStorage.getItem(storageKey)
+
+        if (saved) {
+          const parsed = JSON.parse(saved)
+
+          if (bundledProducts.value && bundledProducts.value.length > 0) {
+            bundledProducts.value.forEach(product => {
+              if (parsed[product.id] && parsed[product.id] > 0) {
+                productQuantities.value[product.id] = parsed[product.id]
+              } else if (product.handle && parsed[product.handle] && parsed[product.handle] > 0) {
+                productQuantities.value[product.id] = parsed[product.handle]
+              }
+
+              const pendingQtyKey = `pending_${product.id}`
+              if (parsed[pendingQtyKey] && parsed[pendingQtyKey] > 0) {
+                pendingCartItems.value[product.id] = parsed[pendingQtyKey]
+              }
+            })
+          } else {
+            Object.keys(parsed).forEach(key => {
+              const savedQty = parsed[key]
+              if (savedQty && savedQty > 0) {
+                if (key.startsWith('pending_')) {
+                  pendingCartItems.value[key.replace('pending_', '')] = savedQty
+                } else {
+                  productQuantities.value[key] = savedQty
+                }
+              }
+            })
+          }
+        }
+      } catch (e) {
+      }
+    }
+
+    function saveQuantitiesToStorage () {
+      try {
+        const storageKey = getStorageKey()
+        const toSave = {}
+        if (bundledProducts.value && bundledProducts.value.length > 0) {
+          bundledProducts.value.forEach(product => {
+            const qty = productQuantities.value[product.id]
+            if (qty && qty > 0) {
+              toSave[product.id] = qty
+              if (product.handle) {
+                toSave[product.handle] = qty
+              }
+            }
+
+            const pendingQty = pendingCartItems.value[product.id]
+            if (pendingQty && pendingQty > 0) {
+              toSave[`pending_${product.id}`] = pendingQty
+            }
+          })
+        } else {
+          Object.keys(productQuantities.value).forEach(key => {
+            const qty = productQuantities.value[key]
+            if (qty && qty > 0) {
+              toSave[key] = qty
+            }
+          })
+          Object.keys(pendingCartItems.value).forEach(key => {
+            const qty = pendingCartItems.value[key]
+            if (qty && qty > 0) {
+              toSave[`pending_${key}`] = qty
+            }
+          })
+        }
+        localStorage.setItem(storageKey, JSON.stringify(toSave))
+      } catch (e) {
+      }
     }
 
     async function loadProject () {
@@ -267,6 +408,7 @@ export default {
                       productVariant {
                         id
                         title
+                        sku
                         availableForSale
                         price {
                           amount
@@ -385,6 +527,7 @@ export default {
             const variant = {
               id: item.id,
               title: variantTitle,
+              sku: item.sku || null,
               price: priceInCents,
               compare_at_price: null,
               available: item.availableForSale,
@@ -413,6 +556,7 @@ export default {
 
             return {
               id: item.product.id || item.id,
+              variantId: item.id,
               title: item.product.title,
               handle: item.product.handle,
               price: priceInCents,
@@ -430,10 +574,13 @@ export default {
           }).filter(p => p !== null)
 
           bundledProducts.value = bundledProductsList
+
           bundledProductsList.forEach(product => {
             productQuantities.value[product.id] = product.bundle_quantity || 1
             pendingCartItems.value[product.id] = 0
           })
+
+          loadQuantitiesFromStorage()
         } else {
           bundledProducts.value = []
         }
@@ -455,11 +602,7 @@ export default {
         if (!productData.variants || productData.variants.length === 0) return
 
         const variantId = productData.variants[0].id
-        const result = await addToCart(variantId, 1)
-
-        if (result && result.success) {
-          toggleFlyout('minicart')
-        }
+        await addToCart(variantId, 1)
       } catch (error) {
       }
     }
@@ -471,41 +614,161 @@ export default {
       } else {
         productQuantities.value[productId] = qty
       }
+      saveQuantitiesToStorage()
     }
 
-    function addProductToPendingCart (productId, quantity) {
-      if (!pendingCartItems.value[productId]) {
-        pendingCartItems.value[productId] = 0
+    async function addProductToPendingCart (productId, quantity) {
+      const bundledProduct = bundledProducts.value.find(p => p.id === productId)
+      if (!bundledProduct) {
+        return
       }
-      pendingCartItems.value[productId] += parseInt(quantity) || 1
+
+      const currentQty = productQuantities.value[productId] || parseInt(quantity) || 1
+
+      let variantId = bundledProduct.variantId
+      if (!variantId && bundledProduct.variants && bundledProduct.variants.length > 0) {
+        variantId = bundledProduct.variants[0].id
+      }
+
+      if (!variantId) {
+        return
+      }
+
+      let numericVariantId = variantId
+      if (typeof variantId === 'string' && variantId.startsWith('gid://')) {
+        const match = variantId.match(/\/(\d+)$/)
+        if (match) {
+          numericVariantId = match[1]
+        } else {
+          return
+        }
+      }
+
+      const updatedPendingCartItems = { ...pendingCartItems.value }
+      if (!updatedPendingCartItems[productId]) {
+        updatedPendingCartItems[productId] = 0
+      }
+      updatedPendingCartItems[productId] += currentQty
+      pendingCartItems.value = updatedPendingCartItems
+
+      const result = await addToCart(numericVariantId, currentQty)
+
+      if (result && result.success) {
+        fetchCart().then(() => {
+          nextTick().then(() => {
+            syncPendingCartItemsWithActualCart()
+          })
+        })
+
+        saveQuantitiesToStorage()
+      } else {
+        updatedPendingCartItems[productId] -= currentQty
+        pendingCartItems.value = updatedPendingCartItems
+      }
     }
 
     async function addAllBundledProductsToCart () {
       if (!bundledProducts.value || bundledProducts.value.length === 0) return
+      if (isAddingAll.value) return
+
+      isAddingAll.value = true
 
       try {
-        const addPromises = bundledProducts.value.map(async (bundledProduct) => {
-          const pendingQty = pendingCartItems.value[bundledProduct.id] || 0
-          if (pendingQty <= 0) {
-            return null
-          }
-
-          const variantId = bundledProduct.id
-          if (!variantId) {
-            return null
-          }
-
-          return await addToCart(variantId, pendingQty)
+        const selectedProducts = bundledProducts.value.filter(bundledProduct => {
+          const selectedQty = productQuantities.value[bundledProduct.id]
+          return selectedQty && selectedQty > 0
         })
 
-        const results = await Promise.all(addPromises)
-        const success = results.some(r => r && r.success)
+        if (selectedProducts.length === 0) {
+          return
+        }
 
-        if (success) {
-          pendingCartItems.value = {}
-          toggleFlyout('minicart')
+        const results = []
+        for (let i = 0; i < selectedProducts.length; i++) {
+          const bundledProduct = selectedProducts[i]
+          const selectedQty = productQuantities.value[bundledProduct.id]
+
+          let variantId = bundledProduct.variantId
+
+          if (!variantId && bundledProduct.variants && bundledProduct.variants.length > 0) {
+            variantId = bundledProduct.variants[0].id
+          }
+
+          if (!variantId) {
+            try {
+              const response = await fetch(`/products/${bundledProduct.handle}.js`)
+              if (response.ok) {
+                const productData = await response.json()
+                if (productData.variants && productData.variants.length > 0) {
+                  variantId = productData.variants[0].id
+                }
+              }
+            } catch (e) {
+            }
+          }
+
+          if (!variantId) {
+            results.push({
+              success: false,
+              reason: 'no_variant_id',
+              product: bundledProduct.handle,
+              title: bundledProduct.title
+            })
+            continue
+          }
+
+          let numericVariantId = variantId
+          if (typeof variantId === 'string' && variantId.startsWith('gid://')) {
+            const match = variantId.match(/\/(\d+)$/)
+            if (match) {
+              numericVariantId = match[1]
+            } else {
+              results.push({
+                success: false,
+                reason: 'invalid_variant_id_format',
+                product: bundledProduct.handle,
+                title: bundledProduct.title
+              })
+              continue
+            }
+          }
+
+          const result = await addToCart(numericVariantId, selectedQty)
+          results.push({
+            ...result,
+            product: bundledProduct.title,
+            quantity: selectedQty
+          })
+
+          if (i < selectedProducts.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 50))
+          }
+        }
+        const successResults = results.filter(r => r && r.success)
+
+        if (successResults.length > 0) {
+          const updatedPendingCartItems = { ...pendingCartItems.value }
+          successResults.forEach(result => {
+            const product = selectedProducts.find(p => p.title === result.product)
+            if (product && result.success) {
+              if (!updatedPendingCartItems[product.id]) {
+                updatedPendingCartItems[product.id] = 0
+              }
+              updatedPendingCartItems[product.id] += result.quantity
+            }
+          })
+          pendingCartItems.value = updatedPendingCartItems
+          saveQuantitiesToStorage()
+
+          fetchCart().then(() => {
+            nextTick().then(() => {
+              syncPendingCartItemsWithActualCart()
+            })
+          })
         }
       } catch (error) {
+      } finally {
+        isAddingAll.value = false
       }
     }
 
@@ -518,6 +781,8 @@ export default {
     })
 
     onMounted(async () => {
+      await fetchCart()
+
       await loadProject()
 
       await nextTick()
@@ -527,9 +792,17 @@ export default {
 
       if (productHandle.value || props.productHandle) {
         await loadProduct()
+        await nextTick()
+        loadQuantitiesFromStorage()
+        await nextTick()
+        syncPendingCartItemsWithActualCart()
       } else if (props.metaobject && props.metaobject.product_handle) {
         productHandle.value = props.metaobject.product_handle
         await loadProduct()
+        await nextTick()
+        loadQuantitiesFromStorage()
+        await nextTick()
+        syncPendingCartItemsWithActualCart()
       }
     })
 
