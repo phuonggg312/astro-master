@@ -48,6 +48,7 @@ export default {
     const pendingCartItems = ref({})
     const isLoading = ref(false)
     const isAddingAll = ref(false)
+    const isAddingProduct = ref(false)
     const error = ref(null)
     const categoryHandle = ref(props.categoryHandle || '')
     const categoryTitle = ref(props.categoryTitle || '')
@@ -590,20 +591,35 @@ export default {
 
     async function addProductToCart () {
       if (!props.productHandle && !product.value) return
+      if (isAddingProduct.value || isAddingToCart.value) return
+
+      isAddingProduct.value = true
 
       try {
         const handle = props.productHandle || product.value?.handle
-        if (!handle) return
+        if (!handle) {
+          isAddingProduct.value = false
+          return
+        }
 
         const response = await fetch(`/products/${handle}.js`)
-        if (!response.ok) return
+        if (!response.ok) {
+          isAddingProduct.value = false
+          return
+        }
 
         const productData = await response.json()
-        if (!productData.variants || productData.variants.length === 0) return
+        if (!productData.variants || productData.variants.length === 0) {
+          isAddingProduct.value = false
+          return
+        }
 
         const variantId = productData.variants[0].id
         await addToCart(variantId, 1)
       } catch (error) {
+        isAddingProduct.value = false
+      } finally {
+        isAddingProduct.value = false
       }
     }
 
@@ -680,6 +696,7 @@ export default {
         })
 
         if (selectedProducts.length === 0) {
+          isAddingAll.value = false
           return
         }
 
@@ -823,6 +840,8 @@ export default {
       categoryHandle,
       categoryTitle,
       isAddingToCart,
+      isAddingProduct,
+      isAddingAll,
       scrollToSupplies,
       printProject,
       addProductToCart,

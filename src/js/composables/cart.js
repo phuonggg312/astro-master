@@ -23,7 +23,10 @@ export function useCart () {
     error.value = null
     if (!variantId) {
       error.value = 'No variant selected.'
-      return
+      return Promise.resolve({ success: false })
+    }
+    if (isAddingToCart.value) {
+      return Promise.resolve({ success: false })
     }
 
     isAddingToCart.value = true

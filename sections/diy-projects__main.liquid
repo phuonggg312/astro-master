@@ -2,8 +2,8 @@
   <div class="max-w-screen-xl mx-auto px-4 lg:px-6">
     <div class="relative mb-8">
       <div class="flex items-center justify-between py-3 border-b border-gray-300">
-        <h1 class="mb-0" style="font-size:18px;">{{ section.settings.title | default: 'DIY Decor & Floral Ideas' }}</h1>
-        <div class="breadcrumb-wrapper uppercase flex items-center" style="font-size:10px; line-height:1.4;">
+        <h1 class="mb-0 diy-projects-title">{{ section.settings.title | default: 'DIY Decor & Floral Ideas' }}</h1>
+        <div class="breadcrumb-wrapper uppercase flex items-center">
           {% render 'breadcrumbs' %}
         </div>
       </div>
@@ -50,44 +50,6 @@
     </div>
   </div>
 </div>
-
-<style>
-  .sub_heading {
-    position: relative;
-    line-height: 50px;
-    font-size: 20px;
-    text-transform: uppercase;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 15px;
-  }
-
-  .sub_heading span {
-    position: relative;
-    padding: 0 20px;
-    display: inline-block;
-    background: transparent;
-  }
-
-  .sub_heading::before,
-  .sub_heading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 34%;
-    max-width: 480px;
-    height: 2px;
-    background: #e0e0e0;
-  }
-
-  .sub_heading::before {
-    left: 0;
-  }
-
-  .sub_heading::after {
-    right: 0;
-  }
-</style>
 
 {% schema %}
   {

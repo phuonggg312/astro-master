@@ -192,6 +192,8 @@ export default {
 
   methods: {
     async handleAddToCart () {
+      if (this.isAddingToCart) return
+
       if (this.onAddToCart) {
         this.onAddToCart(this.product.id, this.finalQuantity)
       } else {

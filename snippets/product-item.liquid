@@ -104,11 +104,11 @@
       </div>
     </template>
     <button-spinner
-      :is-loading="isAddingToCart"
-      class="button button--primary w-full uppercase font-bold"
-      :disabled="!currentVariant || !currentVariant.available">
-      <span v-if="!currentVariant || currentVariant.available">{{ 'products.product.add_to_cart' | t }}</span>
-      <span v-else>{{ 'products.product.sold_out' | t }}</span>
+      :is-loading="isAddingToCart || !currentVariant || !currentVariant.available"
+      class="button button--primary w-full uppercase font-bold">
+      <span v-if="!currentVariant || !currentVariant.available">{{ 'products.product.sold_out' | t }}</span>
+      <span v-else-if="isAddingToCart">Adding...</span>
+      <span v-else>{{ 'products.product.add_to_cart' | t }}</span>
     </button-spinner>
   </form>
 </div>
